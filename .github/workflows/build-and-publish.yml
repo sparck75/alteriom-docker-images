@@ -49,6 +49,17 @@ jobs:
           fi
           echo "Using DOCKER_REPOSITORY: $DOCKER_REPOSITORY"
       
+      - name: Read Version
+        id: version
+        run: |
+          if [ -f "VERSION" ]; then
+            VERSION=$(cat VERSION | tr -d '\n\r')
+          else
+            VERSION="1.0.0"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Using VERSION: $VERSION"
+      
       - name: Build and Push Images
         env:
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
@@ -56,6 +67,37 @@ jobs:
         run: |
           chmod +x scripts/build-images.sh
           ./scripts/build-images.sh push
+      
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ env.VERSION }}
+          release_name: Release v${{ env.VERSION }}
+          body: |
+            ## Docker Images v${{ env.VERSION }}
+            
+            This release contains the following Docker images:
+            
+            ### Production Builder
+            - `${{ env.DOCKER_REPOSITORY }}/builder:latest`
+            - `${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }}`
+            
+            ### Development Builder  
+            - `${{ env.DOCKER_REPOSITORY }}/dev:latest`
+            - `${{ env.DOCKER_REPOSITORY }}/dev:${{ env.VERSION }}`
+            
+            ### Usage
+            ```bash
+            docker pull ${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }}
+            docker run --rm -v ${PWD}:/workspace ${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }} pio run -e esp32dev
+            ```
+            
+            Built on: $(date -u +%Y-%m-%d)
+          draft: false
+          prerelease: false
       
       - name: Image Summary
         run: |
@@ -66,14 +108,21 @@ jobs:
           DATE_TAG=$(date -u +%Y%m%d)
           echo "### Production Builder" >> $GITHUB_STEP_SUMMARY
           echo "- \`${DOCKER_REPOSITORY}/builder:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${DOCKER_REPOSITORY}/builder:${VERSION}\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${DOCKER_REPOSITORY}/builder:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Development Builder" >> $GITHUB_STEP_SUMMARY
           echo "- \`${DOCKER_REPOSITORY}/dev:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${DOCKER_REPOSITORY}/dev:${VERSION}\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${DOCKER_REPOSITORY}/dev:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Version Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Date:** \`${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Release:** Created for v${VERSION}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Usage Example" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${DOCKER_REPOSITORY}/builder:latest" >> $GITHUB_STEP_SUMMARY
-          echo "docker run --rm -v \${PWD}:/workspace ${DOCKER_REPOSITORY}/builder:latest pio run -e diag-esp32-c3" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${DOCKER_REPOSITORY}/builder:${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "docker run --rm -v \${PWD}:/workspace ${DOCKER_REPOSITORY}/builder:${VERSION} pio run -e diag-esp32-c3" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
