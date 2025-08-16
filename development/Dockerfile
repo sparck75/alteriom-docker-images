@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        build-essential git ca-certificates curl unzip wget pkg-config git-core \
-       libffi-dev libssl-dev gcc g++ make cmake vim less sudo htop python3-distutils \
+       libffi-dev libssl-dev gcc g++ make cmake vim less sudo htop \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PlatformIO
