@@ -1,0 +1,79 @@
+name: Build and Publish Docker Images
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    # Run daily at 02:00 UTC as mentioned in README
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+
+env:
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: ${{ env.PLATFORMS }}
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          # Use GitHub Container Registry (GHCR) with GitHub token for seamless authentication
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set Docker Repository
+        id: repo
+        run: |
+          if [ -n "${{ vars.DOCKER_REPOSITORY }}" ]; then
+            echo "DOCKER_REPOSITORY=${{ vars.DOCKER_REPOSITORY }}" >> $GITHUB_ENV
+          elif [ -n "${{ secrets.DOCKER_REPOSITORY }}" ]; then
+            echo "DOCKER_REPOSITORY=${{ secrets.DOCKER_REPOSITORY }}" >> $GITHUB_ENV
+          else
+            echo "DOCKER_REPOSITORY=ghcr.io/${{ github.repository_owner }}/alteriom-docker-images" >> $GITHUB_ENV
+          fi
+          echo "Using DOCKER_REPOSITORY: $DOCKER_REPOSITORY"
+      
+      - name: Build and Push Images
+        env:
+          DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
+          PLATFORMS: ${{ env.PLATFORMS }}
+        run: |
+          chmod +x scripts/build-images.sh
+          ./scripts/build-images.sh push
+      
+      - name: Image Summary
+        run: |
+          echo "## Published Images 🐋" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following images were built and published:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          DATE_TAG=$(date -u +%Y%m%d)
+          echo "### Production Builder" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${DOCKER_REPOSITORY}/builder:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${DOCKER_REPOSITORY}/builder:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Development Builder" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${DOCKER_REPOSITORY}/dev:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${DOCKER_REPOSITORY}/dev:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Usage Example" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${DOCKER_REPOSITORY}/builder:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker run --rm -v \${PWD}:/workspace ${DOCKER_REPOSITORY}/builder:latest pio run -e diag-esp32-c3" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

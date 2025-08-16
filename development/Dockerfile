@@ -8,10 +8,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 # is provided as python3.11-distutils instead of python3-distutils. Try the
 # generic package name first and fall back to the versioned name if needed.
 RUN apt-get update \
+<<<<<<< HEAD
      && apt-get install -y --no-install-recommends \
          build-essential git ca-certificates curl unzip wget pkg-config git-core \
          libffi-dev libssl-dev gcc g++ make cmake vim less sudo htop \
      && rm -rf /var/lib/apt/lists/*
+=======
+    && apt-get install -y --no-install-recommends \
+       build-essential git ca-certificates curl unzip wget pkg-config git-core \
+       libffi-dev libssl-dev gcc g++ make cmake vim less sudo htop \
+    && rm -rf /var/lib/apt/lists/*
+>>>>>>> 9f672e09e783384612b9df07ff1d3d76a728838b
 
 # Install a pinned PlatformIO to avoid upstream surprises
 RUN pip3 install --no-cache-dir -U pip setuptools wheel \

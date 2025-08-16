@@ -8,6 +8,7 @@ Contents
 - production/Dockerfile  — minimal builder image with PlatformIO and espressif platforms
 - development/Dockerfile — development image with extra tools and debugging utilities
 - scripts/build-images.sh — build and push helper script
+- scripts/verify-images.sh — verify published images are available and working
 
 Quick start
 
@@ -24,23 +25,40 @@ Build firmware using the image:
 docker run --rm -v ${PWD}:/workspace ghcr.io/<your_user>/alteriom-docker-images/builder:latest pio run -e diag-esp32-c3
 ```
 
+**Verify images are ready:**
+
+```bash
+# Check if images are published and working
+./scripts/verify-images.sh
+```
+
 Build & publish (admin, one-time - run in an unrestricted network environment)
 
 ```powershell
 # from the cloned Alteriom repo
 # set GITHUB_TOKEN and DOCKER_REPOSITORY environment variables
-./scripts/build_docker_images.sh push
+./scripts/build-images.sh push
 ```
 
 CI / Automated builds
 
-This repository includes a GitHub Actions workflow that builds and publishes the production and development images on-demand and on a daily schedule. The workflow tags images with `:latest` and a date tag (YYYYMMDD). Set the following repository secrets before enabling the workflow:
+This repository includes a GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) that automatically builds and publishes the production and development images when PRs are merged to main, on a daily schedule, and on manual dispatch. The workflow tags images with `:latest` and a date tag (YYYYMMDD). 
 
-- `REGISTRY_USERNAME` - username for the container registry (or leave blank when using GHCR with a personal token)
-- `REGISTRY_TOKEN` - token with package:write (or equivalent) permissions
-- `DOCKER_REPOSITORY` - target repository (e.g. `ghcr.io/<your_user>/alteriom-docker-images`)
+**Setup required:** The workflow is pre-configured to use GitHub Container Registry (GHCR) and requires no additional secrets setup. The workflow uses the built-in `GITHUB_TOKEN` for authentication.
 
-Maintain a regular cadence: the workflow is configured to run daily (02:00 UTC) and on manual dispatch.
+**Admin Notes:** 
+- Repository has been tested and builds are working as of August 2025
+- Docker builds use Python 3.11-slim base image (compatible with current package repositories)
+- Both production and development images build successfully with multi-platform support
+
+**Optional configuration:** If you want to use a different container registry, set the following repository variables:
+
+- `DOCKER_REPOSITORY` - target repository (e.g. `ghcr.io/<your_user>/alteriom-docker-images`) - optional, defaults to `ghcr.io/<owner>/alteriom-docker-images`
+
+The workflow runs:
+- **Automatically** when PRs are merged to the main branch
+- **Daily** at 02:00 UTC  
+- **Manually** via workflow dispatch in the Actions tab
 
 Contribution and maintenance
 
