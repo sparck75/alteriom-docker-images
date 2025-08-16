@@ -33,7 +33,8 @@ build_local(){
   local context="$1"
   local tag="$2"
   echo "Local build ${tag} from ${context}"
-  docker build --platform "${PLATFORMS}" -t "${tag}" "${context}"
+  # For local builds, don't use platform flag as it may not be supported
+  docker build -t "${tag}" "${context}"
 }
 
 if [ "${1:-}" = "push" ]; then
