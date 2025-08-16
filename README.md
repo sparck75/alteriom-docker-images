@@ -38,6 +38,11 @@ This repository includes a GitHub Actions workflow (`.github/workflows/build-and
 
 **Setup required:** The workflow is pre-configured to use GitHub Container Registry (GHCR) and requires no additional secrets setup. The workflow uses the built-in `GITHUB_TOKEN` for authentication.
 
+**Admin Notes:** 
+- Repository has been tested and builds are working as of August 2025
+- Docker builds use Python 3.11-slim base image (compatible with current package repositories)
+- Both production and development images build successfully with multi-platform support
+
 **Optional configuration:** If you want to use a different container registry, set the following repository variables:
 
 - `DOCKER_REPOSITORY` - target repository (e.g. `ghcr.io/<your_user>/alteriom-docker-images`) - optional, defaults to `ghcr.io/<owner>/alteriom-docker-images`
