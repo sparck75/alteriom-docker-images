@@ -2,13 +2,14 @@
 
 Pre-built PlatformIO builder images for the Alteriom project (ESP32 / ESP8266).
 
-This repository contains Dockerfiles and helper scripts to build and publish PlatformIO images that include the required PlatformIO platforms and build tools so CI systems and developers can build firmware without downloading platforms at build time.
+This repository contains optimized Dockerfiles and helper scripts to build and publish minimal PlatformIO images for ESP32/ESP8266 firmware builds. The images are optimized for size while maintaining full functionality.
 
 Contents
-- production/Dockerfile  — minimal builder image with PlatformIO and espressif platforms
-- development/Dockerfile — development image with extra tools and debugging utilities
+- production/Dockerfile  — optimized minimal builder image with PlatformIO (ESP platforms installed at runtime)
+- development/Dockerfile — development image with extra tools and debugging utilities  
 - scripts/build-images.sh — build and push helper script
 - scripts/verify-images.sh — verify published images are available and working
+- OPTIMIZATION_GUIDE.md — detailed guide on image size optimizations
 
 Quick start
 
@@ -40,7 +41,25 @@ Build & publish (admin, one-time - run in an unrestricted network environment)
 ./scripts/build-images.sh push
 ```
 
-CI / Automated builds
+## Image Optimizations
+
+The Docker images have been optimized for minimal size while maintaining full PlatformIO functionality:
+
+**Key optimizations:**
+- ESP32/ESP8266 platforms installed at runtime (smaller base image)
+- Build tools removed after PlatformIO installation  
+- Unnecessary packages eliminated
+- Single-layer package installation for better caching
+
+**Benefits:**
+- Significantly smaller images for faster pulls
+- Always get latest ESP platform versions
+- Better Docker layer caching
+- Same functionality and usage
+
+See [OPTIMIZATION_GUIDE.md](OPTIMIZATION_GUIDE.md) for detailed information.
+
+## CI / Automated builds
 
 This repository includes a GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) that automatically builds and publishes the production and development images when PRs are merged to main, on a daily schedule, and on manual dispatch. The workflow tags images with `:latest` and a date tag (YYYYMMDD). 
 
@@ -73,11 +92,14 @@ Repository structure
 ```
 alteriom-docker-images/
 ├── production/
-│   └── Dockerfile
+│   └── Dockerfile                   # Optimized minimal builder
 ├── development/
-│   └── Dockerfile
+│   └── Dockerfile                   # Development tools + builder
 ├── scripts/
-│   └── build-images.sh
+│   ├── build-images.sh             # Build and push helper
+│   ├── verify-images.sh            # Image verification
+│   └── compare-image-optimizations.sh  # Size comparison tool
+├── OPTIMIZATION_GUIDE.md           # Detailed optimization guide
 └── README.md
 ```
 
