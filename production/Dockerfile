@@ -1,25 +1,25 @@
-# Production builder image for Alteriom
-# Lightweight image with PlatformIO and required platforms
+# Optimized Production builder image for Alteriom
+# Minimal image with PlatformIO for ESP32/ESP8266 builds
+# Platforms are installed at runtime for smaller base image
 
 FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system deps
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       build-essential git ca-certificates curl unzip wget pkg-config git-core \
-       libffi-dev libssl-dev gcc g++ make cmake \
+# Install essential dependencies only, removing build tools after PlatformIO install
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    ca-certificates \
+    gcc \
+    g++ \
+    make \
+    libffi-dev \
+    libssl-dev \
+    && pip3 install --no-cache-dir -U pip \
+    && pip3 install --no-cache-dir "platformio==6.1.13" \
+    && apt-get remove -y gcc g++ make libffi-dev libssl-dev \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
-
-# Install a pinned PlatformIO to avoid upstream surprises
-RUN pip3 install --no-cache-dir -U pip setuptools wheel \
-    && pip3 install --no-cache-dir "platformio==6.1.13"
-
-# Pre-install commonly used PlatformIO platforms and frameworks (attempt)
-# These may fail in restricted networks when building; the admin should build in an unrestricted environment.
-RUN pio pkg install --global platform espressif32 || echo "espressif32 install failed"
-RUN pio pkg install --global platform espressif8266 || echo "espressif8266 install failed"
 
 # Create non-root user and workspace directory for safer builds
 RUN useradd --create-home --shell /bin/false builder \
