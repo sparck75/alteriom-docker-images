@@ -18,8 +18,8 @@ RUN pip3 install --no-cache-dir -U pip setuptools wheel \
 
 # Pre-install commonly used PlatformIO platforms and frameworks (attempt)
 # These may fail in restricted networks when building; the admin should build in an unrestricted environment.
-RUN pio platform install espressif32 || echo "espressif32 install failed"
-RUN pio platform install espressif8266 || echo "espressif8266 install failed"
+RUN pio pkg install --global platform espressif32 || echo "espressif32 install failed"
+RUN pio pkg install --global platform espressif8266 || echo "espressif8266 install failed"
 
 # Create non-root user and workspace directory for safer builds
 RUN useradd --create-home --shell /bin/false builder \
