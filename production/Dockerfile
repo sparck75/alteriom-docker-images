@@ -12,16 +12,22 @@ RUN apt-get update \
        libffi-dev libssl-dev gcc g++ make cmake \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PlatformIO
+# Install a pinned PlatformIO to avoid upstream surprises
 RUN pip3 install --no-cache-dir -U pip setuptools wheel \
-    && pip3 install --no-cache-dir platformio
+    && pip3 install --no-cache-dir "platformio==6.1.13"
 
 # Pre-install commonly used PlatformIO platforms and frameworks (attempt)
 # These may fail in restricted networks when building; the admin should build in an unrestricted environment.
 RUN pio platform install espressif32 || echo "espressif32 install failed"
 RUN pio platform install espressif8266 || echo "espressif8266 install failed"
 
-# Create workspace dir
+# Create non-root user and workspace directory for safer builds
+RUN useradd --create-home --shell /bin/false builder \
+    && mkdir -p /workspace \
+    && chown -R builder:builder /workspace
+
+USER builder
+
 WORKDIR /workspace
 
 # Default entrypoint: run platformio if arguments provided

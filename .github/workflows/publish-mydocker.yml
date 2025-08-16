@@ -24,14 +24,12 @@ jobs:
           # Image name used by this workflow. Change if you want a different image name.
           echo "IMAGE=mydocker" >> $GITHUB_ENV
 
-          # Allow overriding full repository via a secret (e.g. username/mydocker or org/mydocker).
-          if [ -n "${{ secrets.DOCKERHUB_REPOSITORY }}" ]; then
-            echo "REPO=${{ secrets.DOCKERHUB_REPOSITORY }}" >> $GITHUB_ENV
-          else
-            echo "REPO=${{ secrets.DOCKERHUB_USERNAME }}/mydocker" >> $GITHUB_ENV
-          fi
+          # Note: tags use the Docker Hub username secret. If you prefer a custom
+          # repository, set DOCKERHUB_REPOSITORY and adjust the workflow.
+          echo "REPO=${{ secrets.DOCKERHUB_USERNAME }}/mydocker" >> $GITHUB_ENV
 
-          echo "DATE_TAG=$(date -u +%Y%m%d)" >> $GITHUB_ENV
+          # Use run number as a stable build tag in CI
+          echo "DATE_TAG=${{ github.run_number }}" >> $GITHUB_ENV
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -39,7 +37,26 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push multi-arch image
+      - name: Build multi-arch image (load for smoke test)
+        uses: docker/build-push-action@v4
+        with:
+          context: ./production
+          file: ./production/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          load: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/mydocker:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/mydocker:${{ github.run_number }}
+
+      - name: Smoke test image (PlatformIO version)
+        run: |
+          echo "Running smoke tests against loaded image"
+          docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/mydocker:latest --version
+          docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/mydocker:latest pio platform list || echo "platform list failed"
+
+      - name: Push multi-arch image
+        if: ${{ success() }}
         uses: docker/build-push-action@v4
         with:
           context: ./production
@@ -47,5 +64,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ env.REPO }}:latest
-            ${{ env.REPO }}:${{ env.DATE_TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/mydocker:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/mydocker:${{ github.run_number }}
