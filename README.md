@@ -32,6 +32,24 @@ Build & publish (admin, one-time - run in an unrestricted network environment)
 ./scripts/build_docker_images.sh push
 ```
 
+CI / Automated builds
+
+This repository includes a GitHub Actions workflow that builds and publishes the production and development images on-demand and on a daily schedule. The workflow tags images with `:latest` and a date tag (YYYYMMDD). Set the following repository secrets before enabling the workflow:
+
+- `REGISTRY_USERNAME` - username for the container registry (or leave blank when using GHCR with a personal token)
+- `REGISTRY_TOKEN` - token with package:write (or equivalent) permissions
+- `DOCKER_REPOSITORY` - target repository (e.g. `ghcr.io/<your_user>/alteriom-docker-images`)
+
+Maintain a regular cadence: the workflow is configured to run daily (02:00 UTC) and on manual dispatch.
+
+Contribution and maintenance
+
+If you'd like me to help maintain the CI and update images regularly, I can:
+
+- Review and refine the Dockerfiles for size and reproducibility
+- Add automated smoke tests that run a quick `pio run -e diag-esp32-c3` inside the image
+- Keep the daily build workflow and perform periodic reviews when PlatformIO releases major changes
+
 Repository structure
 
 ```
