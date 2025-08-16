@@ -29,18 +29,23 @@ Build & publish (admin, one-time - run in an unrestricted network environment)
 ```powershell
 # from the cloned Alteriom repo
 # set GITHUB_TOKEN and DOCKER_REPOSITORY environment variables
-./scripts/build_docker_images.sh push
+./scripts/build-images.sh push
 ```
 
 CI / Automated builds
 
-This repository includes a GitHub Actions workflow that builds and publishes the production and development images on-demand and on a daily schedule. The workflow tags images with `:latest` and a date tag (YYYYMMDD). Set the following repository secrets before enabling the workflow:
+This repository includes a GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) that automatically builds and publishes the production and development images when PRs are merged to main, on a daily schedule, and on manual dispatch. The workflow tags images with `:latest` and a date tag (YYYYMMDD). 
+
+**Setup required:** Set the following repository secrets before the workflow will work:
 
 - `REGISTRY_USERNAME` - username for the container registry (or leave blank when using GHCR with a personal token)
-- `REGISTRY_TOKEN` - token with package:write (or equivalent) permissions
-- `DOCKER_REPOSITORY` - target repository (e.g. `ghcr.io/<your_user>/alteriom-docker-images`)
+- `REGISTRY_TOKEN` - token with package:write (or equivalent) permissions  
+- `DOCKER_REPOSITORY` - target repository (e.g. `ghcr.io/<your_user>/alteriom-docker-images`) - optional, defaults to `ghcr.io/<owner>/alteriom-docker-images`
 
-Maintain a regular cadence: the workflow is configured to run daily (02:00 UTC) and on manual dispatch.
+The workflow runs:
+- **Automatically** when PRs are merged to the main branch
+- **Daily** at 02:00 UTC  
+- **Manually** via workflow dispatch in the Actions tab
 
 Contribution and maintenance
 
