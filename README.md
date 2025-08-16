@@ -8,6 +8,7 @@ Contents
 - production/Dockerfile  — minimal builder image with PlatformIO and espressif platforms
 - development/Dockerfile — development image with extra tools and debugging utilities
 - scripts/build-images.sh — build and push helper script
+- scripts/verify-images.sh — verify published images are available and working
 
 Quick start
 
@@ -22,6 +23,13 @@ Build firmware using the image:
 ```powershell
 # mount your repository into /workspace and run PlatformIO inside the image
 docker run --rm -v ${PWD}:/workspace ghcr.io/<your_user>/alteriom-docker-images/builder:latest pio run -e diag-esp32-c3
+```
+
+**Verify images are ready:**
+
+```bash
+# Check if images are published and working
+./scripts/verify-images.sh
 ```
 
 Build & publish (admin, one-time - run in an unrestricted network environment)

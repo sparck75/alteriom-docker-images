@@ -40,6 +40,13 @@ Once builds succeed, images will be available at:
 
 ## Verification Commands
 
+**Quick verification script:**
+```bash
+# Run the automated verification script
+./scripts/verify-images.sh
+```
+
+**Manual verification:**
 Test the published images:
 ```bash
 # Pull and test production image
