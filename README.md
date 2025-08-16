@@ -36,10 +36,10 @@ CI / Automated builds
 
 This repository includes a GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) that automatically builds and publishes the production and development images when PRs are merged to main, on a daily schedule, and on manual dispatch. The workflow tags images with `:latest` and a date tag (YYYYMMDD). 
 
-**Setup required:** Set the following repository secrets before the workflow will work:
+**Setup required:** The workflow is pre-configured to use GitHub Container Registry (GHCR) and requires no additional secrets setup. The workflow uses the built-in `GITHUB_TOKEN` for authentication.
 
-- `REGISTRY_USERNAME` - username for the container registry (or leave blank when using GHCR with a personal token)
-- `REGISTRY_TOKEN` - token with package:write (or equivalent) permissions  
+**Optional configuration:** If you want to use a different container registry, set the following repository variables:
+
 - `DOCKER_REPOSITORY` - target repository (e.g. `ghcr.io/<your_user>/alteriom-docker-images`) - optional, defaults to `ghcr.io/<owner>/alteriom-docker-images`
 
 The workflow runs:
