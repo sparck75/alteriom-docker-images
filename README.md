@@ -1,5 +1,13 @@
 # alteriom-docker-images
 
+[![Latest Release](https://img.shields.io/github/v/release/sparck75/alteriom-docker-images?label=Latest%20Version)](https://github.com/sparck75/alteriom-docker-images/releases/latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/sparck75/alteriom-docker-images/build-and-publish.yml?branch=main&label=Build%20Status)](https://github.com/sparck75/alteriom-docker-images/actions/workflows/build-and-publish.yml)
+[![License](https://img.shields.io/github/license/sparck75/alteriom-docker-images)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/sparck75/alteriom-docker-images)](https://github.com/sparck75/alteriom-docker-images/commits/main)
+
+[![Production Image](https://img.shields.io/badge/docker-production%20builder-blue?logo=docker)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fbuilder)
+[![Development Image](https://img.shields.io/badge/docker-development%20builder-blue?logo=docker)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fdev)
+
 Pre-built PlatformIO builder images for the Alteriom project (ESP32 / ESP8266).
 
 This repository contains optimized Dockerfiles and helper scripts to build and publish minimal PlatformIO images for ESP32/ESP8266 firmware builds. The images are optimized for size while maintaining full functionality.
