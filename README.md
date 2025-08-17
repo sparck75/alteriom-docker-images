@@ -4,6 +4,8 @@ Pre-built PlatformIO builder images for the Alteriom project (ESP32 / ESP8266).
 
 This repository contains optimized Dockerfiles and helper scripts to build and publish minimal PlatformIO images for ESP32/ESP8266 firmware builds. The images are optimized for size while maintaining full functionality.
 
+**Status**: Docker tag generation issue has been fixed ✅
+
 Contents
 - production/Dockerfile  — optimized minimal builder image with PlatformIO (ESP platforms installed at runtime)
 - development/Dockerfile — development image with extra tools and debugging utilities  
