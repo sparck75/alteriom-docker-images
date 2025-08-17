@@ -155,12 +155,12 @@ run_tests() {
         # Test each platform
         for platform in "${!TEST_PROJECTS[@]}"; do
             IFS=':' read -r project_dir environment <<< "${TEST_PROJECTS[$platform]}"
-            ((total_tests++))
+            ((total_tests++)) || true
             
             if test_build "$image" "$project_dir" "$environment" "$platform"; then
-                ((passed_tests++))
+                ((passed_tests++)) || true
             else
-                ((failed_tests++))
+                ((failed_tests++)) || true
             fi
             echo ""
         done
@@ -222,3 +222,4 @@ fi
 
 # Run the tests
 run_tests "$@"
+exit $?
