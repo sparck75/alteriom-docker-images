@@ -2,6 +2,16 @@
 
 FROM python:3.11-slim
 
+# Add version labels for tracking
+ARG VERSION=1.4.0
+LABEL org.opencontainers.image.title="Alteriom Development Builder"
+LABEL org.opencontainers.image.description="PlatformIO builder with development tools for ESP32/ESP8266 development"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.vendor="Alteriom"
+LABEL org.opencontainers.image.source="https://github.com/sparck75/alteriom-docker-images"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL maintainer="sparck75 <dominic.lavoie@gmail.com>"
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install all dependencies including dev tools, removing build-only packages after
