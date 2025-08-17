@@ -1,6 +1,6 @@
 # ESP Platform Build Tests
 
-This directory contains test projects to validate that the Docker images can successfully build firmware for ESP32, ESP32-S3, and ESP8266 platforms.
+This directory contains test projects to validate that the Docker images can successfully build firmware for ESP32, ESP32-S3, ESP32-C3, and ESP8266 platforms.
 
 ## Test Projects
 
@@ -19,6 +19,14 @@ Simple test program that initializes serial communication, displays chip informa
 - **Environment**: esp32-s3-devkitc-1
 
 Test program specifically for ESP32-S3 with USB CDC support and PSRAM detection.
+
+### ESP32-C3 Test (`esp32c3-test/`)
+- **Platform**: espressif32
+- **Board**: esp32-c3-devkitm-1
+- **Framework**: Arduino
+- **Environment**: esp32-c3-devkitm-1
+
+Test program specifically for ESP32-C3 with USB CDC support and chip information display.
 
 ### ESP8266 Test (`esp8266-test/`)
 - **Platform**: espressif8266
@@ -55,6 +63,10 @@ docker run --rm -v ${PWD}:/workspace ghcr.io/sparck75/alteriom-docker-images/bui
 # ESP32-S3 build
 cd tests/esp32s3-test
 docker run --rm -v ${PWD}:/workspace ghcr.io/sparck75/alteriom-docker-images/builder:latest run -e esp32-s3-devkitc-1
+
+# ESP32-C3 build
+cd tests/esp32c3-test
+docker run --rm -v ${PWD}:/workspace ghcr.io/sparck75/alteriom-docker-images/builder:latest run -e esp32-c3-devkitm-1
 
 # ESP8266 build
 cd tests/esp8266-test

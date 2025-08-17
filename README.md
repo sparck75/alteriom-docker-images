@@ -8,9 +8,9 @@
 [![Production Image](https://img.shields.io/badge/docker-production%20builder-blue?logo=docker)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fbuilder)
 [![Development Image](https://img.shields.io/badge/docker-development%20builder-blue?logo=docker)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fdev)
 
-Pre-built PlatformIO builder images for the Alteriom project (ESP32 / ESP8266).
+Pre-built PlatformIO builder images for the Alteriom project (ESP32 / ESP32-C3 / ESP8266).
 
-This repository contains optimized Dockerfiles and helper scripts to build and publish minimal PlatformIO images for ESP32/ESP8266 firmware builds. The images are optimized for size while maintaining full functionality.
+This repository contains optimized Dockerfiles and helper scripts to build and publish minimal PlatformIO images for ESP32/ESP32-C3/ESP8266 firmware builds. The images are optimized for size while maintaining full functionality.
 
 **Status**: Docker tag generation issue has been fixed ✅
 
@@ -59,7 +59,7 @@ Build & publish (admin, one-time - run in an unrestricted network environment)
 The Docker images have been optimized for minimal size while maintaining full PlatformIO functionality:
 
 **Key optimizations:**
-- ESP32/ESP8266 platforms installed at runtime (smaller base image)
+- ESP32/ESP32-C3/ESP8266 platforms installed at runtime (smaller base image)
 - Build tools removed after PlatformIO installation  
 - Unnecessary packages eliminated
 - Single-layer package installation for better caching
@@ -82,6 +82,7 @@ Automated tests verify that the Docker images can successfully build firmware fo
 
 - **ESP32** (esp32dev environment)
 - **ESP32-S3** (esp32-s3-devkitc-1 environment)  
+- **ESP32-C3** (esp32-c3-devkitm-1 environment)
 - **ESP8266** (nodemcuv2 environment)
 
 **Run tests manually:**
@@ -112,7 +113,7 @@ See [tests/README.md](tests/README.md) for detailed testing information.
 
 This repository includes a GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) that automatically builds and publishes the production and development images when PRs are merged to main, on a daily schedule, and on manual dispatch. The workflow tags images with `:latest` and a date tag (YYYYMMDD).
 
-**Automated testing:** After successful image builds, the workflow automatically runs ESP platform build tests to validate that the published images are fully functional for ESP32, ESP32-S3, and ESP8266 development. 
+**Automated testing:** After successful image builds, the workflow automatically runs ESP platform build tests to validate that the published images are fully functional for ESP32, ESP32-S3, ESP32-C3, and ESP8266 development. 
 
 **Setup required:** The workflow is pre-configured to use GitHub Container Registry (GHCR) and requires no additional secrets setup. The workflow uses the built-in `GITHUB_TOKEN` for authentication.
 
