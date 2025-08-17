@@ -47,9 +47,12 @@ build_local(){
   local context="$1"
   local tag="$2"
   echo "Local build ${tag} from ${context}"
+  # Extract just the image name (before the colon) from the tag
+  local image_name="${tag##*/}"
+  image_name="${image_name%%:*}"
   # For local builds, don't use platform flag as it may not be supported
   docker build -t "${tag}" \
-    -t "${REPO}/${tag##*/}:${VERSION}" \
+    -t "${REPO}/${image_name}:${VERSION}" \
     --label "org.opencontainers.image.version=${VERSION}" \
     --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --label "org.opencontainers.image.source=https://github.com/sparck75/alteriom-docker-images" \
