@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   schedule:
     # Run daily at 02:00 UTC as mentioned in README
     - cron: '0 2 * * *'
@@ -17,7 +20,7 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     
     steps:
@@ -66,16 +69,20 @@ jobs:
           PLATFORMS: ${{ env.PLATFORMS }}
         run: |
           chmod +x scripts/build-images.sh
-          ./scripts/build-images.sh push
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            ./scripts/build-images.sh push
+          else
+            ./scripts/build-images.sh
+          fi
       
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main'
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ env.VERSION }}
-          release_name: Release v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
           body: |
             ## Docker Images v${{ env.VERSION }}
             
