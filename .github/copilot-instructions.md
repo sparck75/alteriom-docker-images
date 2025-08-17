@@ -34,6 +34,21 @@ export DOCKER_REPOSITORY=ghcr.io/your_user/alteriom-docker-images
 - **PlatformIO Version**: 6.1.13 (pinned for stability)
 - **Base**: python:3.11-slim
 - **Platforms**: linux/amd64, linux/arm64
+- **Version Management**: ✅ Fully automated semantic versioning (current: 1.5.1)
+
+### Automated Versioning Commands
+```bash
+# Check current version
+cat VERSION
+
+# View automated versioning documentation
+cat AUTOMATED_VERSIONING.md
+
+# Use semantic commits for automatic version bumping
+git commit -m "feat: add new ESP32-S3 support"     # Minor bump
+git commit -m "fix: resolve Docker build timeout"  # Patch bump  
+git commit -m "feat!: breaking API changes"        # Major bump
+```
 
 ## Working Effectively
 
@@ -45,9 +60,16 @@ export DOCKER_REPOSITORY=ghcr.io/your_user/alteriom-docker-images
 
 ### Workflow Priority
 1. **ALWAYS** verify images before use: `./scripts/verify-images.sh`
-2. **NEVER CANCEL** long-running builds (can take 15-90 minutes)
-3. **TEST IMMEDIATELY** after any Dockerfile changes
-4. **USE TIMEOUTS** of 60+ minutes for local builds, 45+ minutes for CI builds
+2. **USE SEMANTIC COMMITS** for automated version management
+3. **NEVER CANCEL** long-running builds (can take 15-90 minutes)
+4. **TEST IMMEDIATELY** after any Dockerfile changes
+5. **USE TIMEOUTS** of 60+ minutes for local builds, 45+ minutes for CI builds
+
+### Version Management Best Practices
+- **✅ Automated**: Version numbers increment automatically on PR merges
+- **✅ Semantic**: Use conventional commit messages for proper version bumping
+- **✅ Manual Override**: Emergency version fixes supported with `[skip ci]`
+- **⚠️ Important**: Never manually edit VERSION file without `[skip ci]` flag
 
 ### Image Verification and Status
 - **Comprehensive check**: `./scripts/verify-images.sh` (30-60 seconds)
