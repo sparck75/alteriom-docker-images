@@ -36,6 +36,7 @@ print_error() {
 declare -A TEST_PROJECTS=(
     ["esp32"]="esp32-test:esp32dev"
     ["esp32s3"]="esp32s3-test:esp32-s3-devkitc-1" 
+    ["esp32c3"]="esp32c3-test:esp32-c3-devkitm-1"
     ["esp8266"]="esp8266-test:nodemcuv2"
 )
 
@@ -210,6 +211,7 @@ if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
     echo "Test Platforms:"
     echo "  - ESP32 (esp32dev environment)"
     echo "  - ESP32-S3 (esp32-s3-devkitc-1 environment)"
+    echo "  - ESP32-C3 (esp32-c3-devkitm-1 environment)"
     echo "  - ESP8266 (nodemcuv2 environment)"
     exit 0
 fi
