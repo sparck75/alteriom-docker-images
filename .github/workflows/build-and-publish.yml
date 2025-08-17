@@ -80,7 +80,13 @@ jobs:
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
         run: |
           chmod +x scripts/test-esp-builds.sh
-          ./scripts/test-esp-builds.sh
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            # On main branch, images are pushed with :latest tag
+            ./scripts/test-esp-builds.sh
+          else
+            # On PR branches, images are built locally with :local tag
+            ./scripts/test-esp-builds.sh "${DOCKER_REPOSITORY}/builder:local" "${DOCKER_REPOSITORY}/dev:local"
+          fi
       
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main'
