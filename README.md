@@ -41,6 +41,9 @@ docker run --rm -v ${PWD}:/workspace ghcr.io/<your_user>/alteriom-docker-images/
 ```bash
 # Check if images are published and working
 ./scripts/verify-images.sh
+
+# Test ESP platform builds with Docker images
+./scripts/test-esp-builds.sh
 ```
 
 Build & publish (admin, one-time - run in an unrestricted network environment)
@@ -69,9 +72,47 @@ The Docker images have been optimized for minimal size while maintaining full Pl
 
 See [OPTIMIZATION_GUIDE.md](OPTIMIZATION_GUIDE.md) for detailed information.
 
+## Testing and Validation
+
+The repository includes comprehensive tests to validate Docker image functionality:
+
+### ESP Platform Build Tests
+
+Automated tests verify that the Docker images can successfully build firmware for all supported ESP platforms:
+
+- **ESP32** (esp32dev environment)
+- **ESP32-S3** (esp32-s3-devkitc-1 environment)  
+- **ESP8266** (nodemcuv2 environment)
+
+**Run tests manually:**
+
+```bash
+# Test with default images (builder:latest and dev:latest)
+./scripts/test-esp-builds.sh
+
+# Test with specific image
+./scripts/test-esp-builds.sh ghcr.io/sparck75/alteriom-docker-images/builder:latest
+
+# Show help and options
+./scripts/test-esp-builds.sh --help
+```
+
+**Test validation includes:**
+- Docker image availability and accessibility
+- PlatformIO functionality within containers
+- ESP platform installation and compilation
+- Arduino framework compatibility
+- Successful firmware generation
+
+The tests are automatically executed in the CI/CD pipeline after images are built, ensuring published images are fully functional.
+
+See [tests/README.md](tests/README.md) for detailed testing information.
+
 ## CI / Automated builds
 
-This repository includes a GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) that automatically builds and publishes the production and development images when PRs are merged to main, on a daily schedule, and on manual dispatch. The workflow tags images with `:latest` and a date tag (YYYYMMDD). 
+This repository includes a GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) that automatically builds and publishes the production and development images when PRs are merged to main, on a daily schedule, and on manual dispatch. The workflow tags images with `:latest` and a date tag (YYYYMMDD).
+
+**Automated testing:** After successful image builds, the workflow automatically runs ESP platform build tests to validate that the published images are fully functional for ESP32, ESP32-S3, and ESP8266 development. 
 
 **Setup required:** The workflow is pre-configured to use GitHub Container Registry (GHCR) and requires no additional secrets setup. The workflow uses the built-in `GITHUB_TOKEN` for authentication.
 
@@ -108,7 +149,13 @@ alteriom-docker-images/
 ├── scripts/
 │   ├── build-images.sh             # Build and push helper
 │   ├── verify-images.sh            # Image verification
+│   ├── test-esp-builds.sh          # ESP platform build testing
 │   └── compare-image-optimizations.sh  # Size comparison tool
+├── tests/
+│   ├── README.md                   # Testing documentation
+│   ├── esp32-test/                 # ESP32 test project
+│   ├── esp32s3-test/               # ESP32-S3 test project
+│   └── esp8266-test/               # ESP8266 test project
 ├── OPTIMIZATION_GUIDE.md           # Detailed optimization guide
 └── README.md
 ```

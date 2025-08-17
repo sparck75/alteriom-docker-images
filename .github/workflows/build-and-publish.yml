@@ -75,6 +75,13 @@ jobs:
             ./scripts/build-images.sh
           fi
       
+      - name: Test ESP Platform Builds
+        env:
+          DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
+        run: |
+          chmod +x scripts/test-esp-builds.sh
+          ./scripts/test-esp-builds.sh
+      
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v1
@@ -95,6 +102,9 @@ jobs:
             ### Development Builder  
             - `${{ env.DOCKER_REPOSITORY }}/dev:latest`
             - `${{ env.DOCKER_REPOSITORY }}/dev:${{ env.VERSION }}`
+            
+            ### Testing
+            All images have been validated with ESP32, ESP32-S3, and ESP8266 test builds.
             
             ### Usage
             ```bash
