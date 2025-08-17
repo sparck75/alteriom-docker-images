@@ -52,8 +52,72 @@ jobs:
           fi
           echo "Using DOCKER_REPOSITORY: $DOCKER_REPOSITORY"
       
-      - name: Read Version
+      - name: Bump Version
+        id: bump_version
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          # Get current version
+          if [ -f "VERSION" ]; then
+            CURRENT_VERSION=$(cat VERSION | tr -d '\n\r')
+          else
+            CURRENT_VERSION="1.0.0"
+          fi
+          
+          # Parse version components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          
+          # Check commit messages for version bump indicators
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if echo "$COMMIT_MSG" | grep -qE "^(BREAKING CHANGE|feat!|fix!|perf!):"; then
+            # Major version bump for breaking changes
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+            echo "🚨 MAJOR version bump due to breaking change"
+          elif echo "$COMMIT_MSG" | grep -qE "^(feat|feature):"; then
+            # Minor version bump for new features
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            echo "✨ MINOR version bump due to new feature"
+          elif echo "$COMMIT_MSG" | grep -qE "^(fix|bug|patch|hotfix):"; then
+            # Patch version bump for bug fixes
+            PATCH=$((PATCH + 1))
+            echo "🐛 PATCH version bump due to bug fix"
+          elif echo "$COMMIT_MSG" | grep -qE "Merge pull request"; then
+            # Default patch bump for merged PRs
+            PATCH=$((PATCH + 1))
+            echo "🔀 PATCH version bump due to PR merge"
+          else
+            echo "ℹ️ No version bump - using current version"
+          fi
+          
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          
+          # Only update if version changed
+          if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
+            echo "$NEW_VERSION" > VERSION
+            echo "📈 Version bumped from $CURRENT_VERSION to $NEW_VERSION"
+            
+            # Configure git for the bot
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            
+            # Commit version bump
+            git add VERSION
+            git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
+            git push
+            
+            echo "VERSION_CHANGED=true" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION_CHANGED=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "PREVIOUS_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+
+      - name: Read Version  
         id: version
+        if: github.ref != 'refs/heads/main' || github.event_name != 'push'
         run: |
           if [ -f "VERSION" ]; then
             VERSION=$(cat VERSION | tr -d '\n\r')
@@ -88,6 +152,53 @@ jobs:
             ./scripts/test-esp-builds.sh "${DOCKER_REPOSITORY}/builder:local" "${DOCKER_REPOSITORY}/dev:local"
           fi
       
+      - name: Generate Release Notes
+        id: release_notes
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Get commits since last release
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            # If no previous tags, get all commits from beginning
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --reverse)
+          else
+            # Get commits since last tag
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --reverse)
+          fi
+          
+          # Create release notes
+          cat > release_notes.md << EOF
+          ## Docker Images v${{ env.VERSION }}
+          
+          This release contains the following Docker images:
+          
+          ### Production Builder
+          - \`${{ env.DOCKER_REPOSITORY }}/builder:latest\`
+          - \`${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }}\`
+          
+          ### Development Builder  
+          - \`${{ env.DOCKER_REPOSITORY }}/dev:latest\`
+          - \`${{ env.DOCKER_REPOSITORY }}/dev:${{ env.VERSION }}\`
+          
+          ### Changes in this release
+          $COMMITS
+          
+          ### Testing
+          All images have been validated with ESP32, ESP32-S3, ESP32-C3, and ESP8266 test builds.
+          
+          ### Usage
+          \`\`\`bash
+          docker pull ${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }}
+          docker run --rm -v \${PWD}:/workspace ${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }} pio run -e esp32dev
+          \`\`\`
+          
+          Built on: \$(date -u +%Y-%m-%d)
+          EOF
+          
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+          cat release_notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v1
@@ -96,29 +207,7 @@ jobs:
         with:
           tag_name: v${{ env.VERSION }}
           name: Release v${{ env.VERSION }}
-          body: |
-            ## Docker Images v${{ env.VERSION }}
-            
-            This release contains the following Docker images:
-            
-            ### Production Builder
-            - `${{ env.DOCKER_REPOSITORY }}/builder:latest`
-            - `${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }}`
-            
-            ### Development Builder  
-            - `${{ env.DOCKER_REPOSITORY }}/dev:latest`
-            - `${{ env.DOCKER_REPOSITORY }}/dev:${{ env.VERSION }}`
-            
-            ### Testing
-            All images have been validated with ESP32, ESP32-S3, and ESP8266 test builds.
-            
-            ### Usage
-            ```bash
-            docker pull ${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }}
-            docker run --rm -v ${PWD}:/workspace ${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }} pio run -e esp32dev
-            ```
-            
-            Built on: $(date -u +%Y-%m-%d)
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
           draft: false
           prerelease: false
       
