@@ -131,11 +131,20 @@ jobs:
         env:
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
           PLATFORMS: ${{ env.PLATFORMS }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
           chmod +x scripts/build-images.sh
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Daily builds: only build and push development image
+            echo "🌅 Daily build: Building development image only"
+            ./scripts/build-images.sh dev-only
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            # PR merges and manual triggers: build both images
+            echo "🚀 Production build: Building both images"
             ./scripts/build-images.sh push
           else
+            # PR branches: build locally only
+            echo "🔧 PR build: Building locally"
             ./scripts/build-images.sh
           fi
       
@@ -144,7 +153,11 @@ jobs:
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
         run: |
           chmod +x scripts/test-esp-builds.sh
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Daily builds: only test development image
+            echo "🌅 Daily build: Testing development image only"
+            ./scripts/test-esp-builds.sh "${DOCKER_REPOSITORY}/dev:latest"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
             # On main branch, images are pushed with :latest tag
             ./scripts/test-esp-builds.sh
           else
@@ -154,7 +167,7 @@ jobs:
       
       - name: Generate Release Notes
         id: release_notes
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
         run: |
           # Get commits since last release
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
@@ -200,7 +213,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -215,26 +228,55 @@ jobs:
         run: |
           echo "## Published Images 🐋" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The following images were built and published:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           DATE_TAG=$(date -u +%Y%m%d)
-          echo "### Production Builder" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/builder:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/builder:${VERSION}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/builder:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Development Builder" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/dev:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/dev:${VERSION}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/dev:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Version Information" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version:** \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Build Date:** \`${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitHub Release:** Created for v${VERSION}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Daily build summary
+            DEV_VERSION="${VERSION}-dev-${DATE_TAG}"
+            echo "**Daily Build:** Development image only" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Development Builder (Updated)" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/dev:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/dev:${DEV_VERSION}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/dev:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Production Builder (Not Updated)" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/builder:latest\` (unchanged)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Build Information" >> $GITHUB_STEP_SUMMARY
+            echo "- **Build Type:** Daily development build" >> $GITHUB_STEP_SUMMARY
+            echo "- **Dev Version:** \`${DEV_VERSION}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Production Version:** \`${VERSION}\` (unchanged)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Date:** \`${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            # Production build summary
+            echo "**Production Build:** Both images updated" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Production Builder" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/builder:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/builder:${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/builder:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Development Builder" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/dev:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/dev:${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/dev:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Version Information" >> $GITHUB_STEP_SUMMARY
+            echo "- **Version:** \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Build Date:** \`${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **GitHub Release:** Created for v${VERSION}" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Usage Example" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${DOCKER_REPOSITORY}/builder:${VERSION}" >> $GITHUB_STEP_SUMMARY
-          echo "docker run --rm -v \${PWD}:/workspace ${DOCKER_REPOSITORY}/builder:${VERSION} pio run -e diag-esp32-c3" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "# Use development image (updated daily)" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${DOCKER_REPOSITORY}/dev:latest" >> $GITHUB_STEP_SUMMARY
+            echo "docker run --rm -v \${PWD}:/workspace ${DOCKER_REPOSITORY}/dev:latest pio run -e diag-esp32-c3" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "# Use production image (stable)" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${DOCKER_REPOSITORY}/builder:${VERSION}" >> $GITHUB_STEP_SUMMARY
+            echo "docker run --rm -v \${PWD}:/workspace ${DOCKER_REPOSITORY}/builder:${VERSION} pio run -e diag-esp32-c3" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

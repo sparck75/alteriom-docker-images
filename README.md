@@ -111,15 +111,20 @@ See [tests/README.md](tests/README.md) for detailed testing information.
 
 ## CI / Automated builds
 
-This repository includes a GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) that automatically builds and publishes the production and development images when PRs are merged to main, on a daily schedule, and on manual dispatch. 
+This repository includes a GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) that automatically builds and publishes Docker images with different strategies based on the trigger type.
 
-**🚀 Automated Versioning:** The workflow now includes fully automated semantic versioning that:
-- Automatically increments version numbers based on commit message conventions
-- Creates GitHub releases with auto-generated release notes  
-- Tags Docker images with semantic version numbers (`:latest`, `:1.5.1`, `:YYYYMMDD`)
-- Eliminates manual version management errors
+**🌅 Daily Builds (Optimized):** 
+- **Schedule**: Daily at 02:00 UTC, but **only builds the development image**
+- **Development versions**: Tagged with format `1.6.0-dev-YYYYMMDD` for date-specific tracking
+- **Cost optimization**: Reduces CI/CD resource usage by ~50% while maintaining development image freshness
+- **Production unchanged**: Stable production images remain unchanged during daily builds
 
-**Automated testing:** After successful image builds, the workflow automatically runs ESP platform build tests to validate that the published images are fully functional for ESP32, ESP32-S3, ESP32-C3, and ESP8266 development. 
+**🚀 Production Builds:**
+- **PR merges**: Full builds of both production and development images with version increments
+- **Manual dispatch**: Complete builds available via GitHub Actions interface
+- **Automated versioning**: Semantic version bumping based on commit message conventions
+
+**🧪 Automated testing:** After successful image builds, the workflow automatically runs ESP platform build tests to validate that the published images are fully functional for ESP32, ESP32-S3, ESP32-C3, and ESP8266 development. 
 
 **Setup required:** The workflow is pre-configured to use GitHub Container Registry (GHCR) and requires no additional secrets setup. The workflow uses the built-in `GITHUB_TOKEN` for authentication.
 
@@ -135,9 +140,9 @@ This repository includes a GitHub Actions workflow (`.github/workflows/build-and
 - `DOCKER_REPOSITORY` - target repository (e.g. `ghcr.io/<your_user>/alteriom-docker-images`) - optional, defaults to `ghcr.io/<owner>/alteriom-docker-images`
 
 The workflow runs:
-- **Automatically** when PRs are merged to the main branch
-- **Daily** at 02:00 UTC  
-- **Manually** via workflow dispatch in the Actions tab
+- **Daily builds** at 02:00 UTC (development image only - cost optimized)
+- **Production builds** when PRs are merged to the main branch (both images)
+- **Manual builds** via workflow dispatch in the Actions tab (both images)
 
 Contribution and maintenance
 
