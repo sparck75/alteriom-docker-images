@@ -246,7 +246,7 @@ jobs:
           docker run --rm -v \${PWD}:/workspace ${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }} pio run -e esp32dev
           \`\`\`
           
-          Built on: \$(date -u +%Y-%m-%d)
+          Built on: $(date -u +%Y-%m-%d)
           EOF
           
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
