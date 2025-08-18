@@ -55,6 +55,8 @@ git commit -m "feat!: breaking API changes"        # Major bump
 ### Prerequisites and Setup
 - **Docker**: Required for all operations - ensure Docker is installed and running
 - **Network Access**: Unrestricted internet access required for reliable builds (PyPI, GitHub, etc.)
+  - See [FIREWALL_CONFIGURATION.md](../FIREWALL_CONFIGURATION.md) for complete firewall allowlist requirements
+  - Critical domains: `api.github.com`, `ghcr.io`, `img.shields.io`, `pypi.org`
 - **Environment**: Set `DOCKER_REPOSITORY=ghcr.io/your_user/alteriom-docker-images` for local builds
 - **Permissions**: Ensure Docker can run without sudo or use appropriate sudo commands
 
@@ -418,9 +420,11 @@ export VERSION=1.4.0                      # Override version (read from VERSION 
 - **Restricted environments**: SSL certificate errors are common
   - Build in unrestricted network when possible
   - Use pre-published images for development
+  - See [FIREWALL_CONFIGURATION.md](../FIREWALL_CONFIGURATION.md) for complete allowlist requirements
 - **Registry authentication**: Uses GitHub token automatically in CI
 - **Multi-platform builds**: Requires BuildKit and QEMU emulation
 - **Firewall considerations**: Ensure Docker registry access (443/tcp)
+- **Common firewall blocks**: `api.github.com`, `img.shields.io`, `ghcr.io`, `pypi.org`
 
 ## Image Registry and Distribution
 
@@ -479,6 +483,14 @@ docker history ghcr.io/sparck75/alteriom-docker-images/builder:latest
   - **Solution**: Run builds in unrestricted network environment
   - **Workaround**: Use pre-published images for development
   - **Command**: Test with `curl -I https://pypi.org` to verify network access
+  - **Documentation**: See [FIREWALL_CONFIGURATION.md](../FIREWALL_CONFIGURATION.md) for complete allowlist
+
+- **Firewall blocks during Copilot operations**:
+  - **Symptom**: Warnings about blocked URLs (api.github.com, img.shields.io)
+  - **Cause**: Corporate firewall blocking external services
+  - **Solution**: Add required domains to firewall allowlist
+  - **Critical domains**: `api.github.com`, `ghcr.io`, `img.shields.io`, `pypi.org`
+  - **Action**: Create GitHub issue and assign to @sparck75 for new blocks
 
 - **Docker build failures**:
   - **Cause**: Insufficient resources, network timeouts, base image issues
@@ -679,13 +691,19 @@ git log --oneline -5
 - **Registry**: GitHub Container Registry (GHCR) for public distribution
 - **Tagging**: Automatic tagging with date, version, and latest tags
 
-## Additional Resources and References
+### Additional Resources and References
 
 ### Documentation Links
 - **Repository README**: [Usage documentation and quick start guide](README.md)
 - **Admin Setup**: [Administrator configuration guide](ADMIN_SETUP.md)
 - **Optimization Guide**: [Image size optimization strategies](OPTIMIZATION_GUIDE.md)
+- **Firewall Configuration**: [Complete network access requirements](FIREWALL_CONFIGURATION.md)
 - **GitHub Actions**: [Workflow configuration](.github/workflows/build-and-publish.yml)
+
+### Copilot-Specific Resources
+- **Firewall Issues**: When Copilot encounters blocked URLs, refer to [FIREWALL_CONFIGURATION.md](../FIREWALL_CONFIGURATION.md)
+- **Network Troubleshooting**: Use the verification commands in the firewall configuration document
+- **New Blocks**: Create GitHub issue with firewall block template and assign to @sparck75
 
 ### External References
 - **PlatformIO Documentation**: [https://docs.platformio.org/](https://docs.platformio.org/)

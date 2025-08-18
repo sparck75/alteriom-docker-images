@@ -14,12 +14,13 @@ This repository contains optimized Dockerfiles and helper scripts to build and p
 
 **Status**: Docker tag generation issue has been fixed ✅
 
-Contents
+## Contents
 - production/Dockerfile  — optimized minimal builder image with PlatformIO (ESP platforms installed at runtime)
 - development/Dockerfile — development image with extra tools and debugging utilities  
 - scripts/build-images.sh — build and push helper script
 - scripts/verify-images.sh — verify published images are available and working
 - OPTIMIZATION_GUIDE.md — detailed guide on image size optimizations
+- FIREWALL_CONFIGURATION.md — network access requirements and firewall allowlist
 
 Quick start
 
