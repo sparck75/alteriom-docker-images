@@ -141,6 +141,10 @@ export DOCKER_REPOSITORY=ghcr.io/your_user/alteriom-docker-images
 ./scripts/build-images.sh push
 # Set timeout to 90+ minutes - NEVER CANCEL
 
+# Build and push development image only (10-30 minutes) - for daily builds
+./scripts/build-images.sh dev-only
+# Set timeout to 45+ minutes - NEVER CANCEL
+
 # Check build status
 ./scripts/status-check.sh
 ```
@@ -156,9 +160,9 @@ export DOCKER_REPOSITORY=ghcr.io/your_user/alteriom-docker-images
 
 #### Automatic Triggers
 The GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) triggers automatically on:
-- **PR merges** to main branch
-- **Daily builds** at 02:00 UTC  
-- **Manual dispatch** via GitHub Actions interface
+- **PR merges** to main branch (builds both production and development images)
+- **Daily builds** at 02:00 UTC (development image only - cost optimized)
+- **Manual dispatch** via GitHub Actions interface (builds both images)
 
 #### Manual Build Process
 1. Navigate to [Actions tab](https://github.com/sparck75/alteriom-docker-images/actions)
@@ -168,10 +172,11 @@ The GitHub Actions workflow (`.github/workflows/build-and-publish.yml`) triggers
 5. Click "Run workflow" to start
 
 #### Build Timing and Monitoring
-- **Duration**: 15-30 minutes typically (set timeout to 45+ minutes)
+- **Daily builds**: 15-20 minutes typically (development image only)
+- **Production builds**: 25-35 minutes typically (both images)
 - **Status**: Monitor via Actions tab for real-time progress
 - **Artifacts**: Built images published to GHCR automatically
-- **Tags**: Creates both `:latest` and `:YYYYMMDD` tags
+- **Tags**: Creates `:latest`, version, and date tags. Daily builds also create `:1.6.0-dev-YYYYMMDD` tags
 - **⚠️ Never cancel builds** - can corrupt registry state
 
 #### Post-Build Verification
