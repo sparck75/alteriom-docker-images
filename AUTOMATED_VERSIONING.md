@@ -25,7 +25,12 @@ When PRs are merged to main branch, the CI/CD workflow automatically:
 | `fix:`, `bug:`, `patch:`, `hotfix:` | **PATCH** (1.5.x) | Bug fixes, small improvements |
 | `Merge pull request` | **PATCH** (1.5.x) | Default for any PR merge |
 
-### Current Version: 1.5.1
+### Current Version: 1.6.1
+
+**Development Badge System**: The repository now includes an automated development badge that shows:
+- Current development version with build numbers (e.g., "1.6.1+ (build 20241201)")
+- Automatic updates when development images are built
+- Links to GHCR development package for easy access
 
 ## Instructions for Future Agents
 
