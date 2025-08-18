@@ -35,11 +35,19 @@ else
   VERSION="1.0.0"
 fi
 
+# Read build number from BUILD_NUMBER file
+if [ -f "$ROOT_DIR/BUILD_NUMBER" ]; then
+  BUILD_NUMBER=$(cat "$ROOT_DIR/BUILD_NUMBER" | tr -d '\n\r')
+else
+  BUILD_NUMBER=1
+fi
+
 echo "Building version: $VERSION"
+echo "Build number: $BUILD_NUMBER"
 
 # For daily builds, create a dev-specific version tag
 if [ "${1:-}" = "dev-only" ] && [ "${GITHUB_EVENT_NAME:-}" = "schedule" ]; then
-  DEV_VERSION="${VERSION}-dev-$(date -u +%Y%m%d)"
+  DEV_VERSION="${VERSION}-dev-build.${BUILD_NUMBER}"
   echo "Creating development version: $DEV_VERSION"
   
   # Show audit context if available
@@ -126,20 +134,41 @@ build_and_push(){
   get_package_versions "$context"
   
   # Build with detailed labels for tracking
-  docker buildx build --platform "${PLATFORMS}" "${context}" \
-    --build-arg VERSION="${version}" \
-    --tag "${REPO}/${image}:latest" \
-    --tag "${REPO}/${image}:${version}" \
-    --tag "${REPO}/${image}:${DATE_TAG}" \
-    --label "org.opencontainers.image.version=${version}" \
-    --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    --label "org.opencontainers.image.source=https://github.com/sparck75/alteriom-docker-images" \
-    --label "org.opencontainers.image.title=Alteriom PlatformIO Builder" \
-    --label "org.opencontainers.image.description=ESP32/ESP8266 firmware build environment" \
-    --label "build.audit.changes=${AUDIT_CHANGES:-No audit performed}" \
-    --label "build.audit.result=${AUDIT_RESULT:-No audit performed}" \
-    --label "build.trigger=${GITHUB_EVENT_NAME:-manual}" \
-    --push
+  # Use different tagging strategy for dev builds with build numbers
+  if [ "$image" = "dev" ] && [ "${GITHUB_EVENT_NAME:-}" = "schedule" ]; then
+    # Development build with build number
+    docker buildx build --platform "${PLATFORMS}" "${context}" \
+      --build-arg VERSION="${version}" \
+      --tag "${REPO}/${image}:latest" \
+      --tag "${REPO}/${image}:${version}" \
+      --tag "${REPO}/${image}:build.${BUILD_NUMBER}" \
+      --label "org.opencontainers.image.version=${version}" \
+      --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      --label "org.opencontainers.image.source=https://github.com/sparck75/alteriom-docker-images" \
+      --label "org.opencontainers.image.title=Alteriom PlatformIO Builder (Development)" \
+      --label "org.opencontainers.image.description=ESP32/ESP8266 firmware build environment with dev tools" \
+      --label "build.number=${BUILD_NUMBER}" \
+      --label "build.audit.changes=${AUDIT_CHANGES:-No audit performed}" \
+      --label "build.audit.result=${AUDIT_RESULT:-No audit performed}" \
+      --label "build.trigger=${GITHUB_EVENT_NAME:-manual}" \
+      --push
+  else
+    # Production build or regular build with date tags
+    docker buildx build --platform "${PLATFORMS}" "${context}" \
+      --build-arg VERSION="${version}" \
+      --tag "${REPO}/${image}:latest" \
+      --tag "${REPO}/${image}:${version}" \
+      --tag "${REPO}/${image}:${DATE_TAG}" \
+      --label "org.opencontainers.image.version=${version}" \
+      --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      --label "org.opencontainers.image.source=https://github.com/sparck75/alteriom-docker-images" \
+      --label "org.opencontainers.image.title=Alteriom PlatformIO Builder" \
+      --label "org.opencontainers.image.description=ESP32/ESP8266 firmware build environment" \
+      --label "build.audit.changes=${AUDIT_CHANGES:-No audit performed}" \
+      --label "build.audit.result=${AUDIT_RESULT:-No audit performed}" \
+      --label "build.trigger=${GITHUB_EVENT_NAME:-manual}" \
+      --push
+  fi
     
   echo "✅ Successfully built and pushed ${REPO}/${image}:${version}"
 }
@@ -196,7 +225,7 @@ show_build_summary() {
     echo "Development Image Tags:"
     echo "  ${REPO}/dev:latest"
     echo "  ${REPO}/dev:${DEV_VERSION}"
-    echo "  ${REPO}/dev:${DATE_TAG}"
+    echo "  ${REPO}/dev:build.${BUILD_NUMBER}"
   elif [ "$build_type" = "production" ]; then
     echo ""
     echo "Production Image Tags:"
