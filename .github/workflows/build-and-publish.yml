@@ -127,24 +127,78 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Using VERSION: $VERSION"
       
+      - name: Package Audit for Daily Builds
+        id: audit
+        if: github.event_name == 'schedule'
+        env:
+          DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
+        run: |
+          chmod +x scripts/audit-packages.sh
+          echo "🔍 Running daily package audit..."
+          
+          # Run audit and capture result
+          if ./scripts/audit-packages.sh; then
+            echo "audit_result=build_recommended" >> $GITHUB_OUTPUT
+            echo "build_needed=true" >> $GITHUB_OUTPUT
+          else
+            echo "audit_result=build_skipped" >> $GITHUB_OUTPUT
+            echo "build_needed=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Extract audit information for later steps
+          if [ -f "audit-report.md" ]; then
+            # Extract change summary from audit report
+            CHANGE_SUMMARY=$(grep "^**Change Summary:**" audit-report.md | cut -d' ' -f3- || echo "No changes detected")
+            echo "change_summary=$CHANGE_SUMMARY" >> $GITHUB_OUTPUT
+            
+            # Save audit report as artifact
+            echo "📋 Audit report generated - will be saved as artifact"
+          fi
+
       - name: Build and Push Images
+        if: github.event_name != 'schedule' || steps.audit.outputs.build_needed == 'true'
         env:
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
           PLATFORMS: ${{ env.PLATFORMS }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          AUDIT_RESULT: ${{ steps.audit.outputs.audit_result }}
+          AUDIT_CHANGES: ${{ steps.audit.outputs.change_summary }}
         run: |
           chmod +x scripts/build-images.sh
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Daily builds: only build and push development image (after audit approval)
+            echo "🌅 Daily build: Building development image only"
+            echo "📋 Audit result: ${AUDIT_RESULT}"
+            echo "📋 Changes detected: ${AUDIT_CHANGES}"
+            ./scripts/build-images.sh dev-only
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            # PR merges and manual triggers: build both images
+            echo "🚀 Production build: Building both images"
             ./scripts/build-images.sh push
           else
+            # PR branches: build locally only
+            echo "🔧 PR build: Building locally"
             ./scripts/build-images.sh
           fi
+
+      - name: Skip Daily Build
+        if: github.event_name == 'schedule' && steps.audit.outputs.build_needed == 'false'
+        run: |
+          echo "⏭️ Daily build skipped - no changes detected"
+          echo "📋 Audit result: ${{ steps.audit.outputs.audit_result }}"
+          echo "📋 Reason: ${{ steps.audit.outputs.change_summary }}"
       
       - name: Test ESP Platform Builds
+        if: github.event_name != 'schedule' || steps.audit.outputs.build_needed == 'true'
         env:
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
         run: |
           chmod +x scripts/test-esp-builds.sh
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Daily builds: only test development image
+            echo "🌅 Daily build: Testing development image only"
+            ./scripts/test-esp-builds.sh "${DOCKER_REPOSITORY}/dev:latest"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
             # On main branch, images are pushed with :latest tag
             ./scripts/test-esp-builds.sh
           else
@@ -154,7 +208,7 @@ jobs:
       
       - name: Generate Release Notes
         id: release_notes
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
         run: |
           # Get commits since last release
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
@@ -192,7 +246,7 @@ jobs:
           docker run --rm -v \${PWD}:/workspace ${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }} pio run -e esp32dev
           \`\`\`
           
-          Built on: \$(date -u +%Y-%m-%d)
+          Built on: $(date -u +%Y-%m-%d)
           EOF
           
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
@@ -200,7 +254,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -211,30 +265,94 @@ jobs:
           draft: false
           prerelease: false
       
+      - name: Upload Audit Report
+        if: github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-audit-report
+          path: audit-report.md
+          retention-days: 30
+
       - name: Image Summary
         run: |
           echo "## Published Images 🐋" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The following images were built and published:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           DATE_TAG=$(date -u +%Y%m%d)
-          echo "### Production Builder" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/builder:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/builder:${VERSION}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/builder:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Development Builder" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/dev:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/dev:${VERSION}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${DOCKER_REPOSITORY}/dev:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Version Information" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version:** \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Build Date:** \`${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitHub Release:** Created for v${VERSION}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Daily build summary
+            if [ "${{ steps.audit.outputs.build_needed }}" = "true" ]; then
+              # Build was executed
+              DEV_VERSION="${VERSION}-dev-${DATE_TAG}"
+              echo "**Daily Build:** Development image updated based on audit" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### 🔍 Package Audit Results" >> $GITHUB_STEP_SUMMARY
+              echo "- **Status:** Build recommended" >> $GITHUB_STEP_SUMMARY
+              echo "- **Changes:** ${{ steps.audit.outputs.change_summary }}" >> $GITHUB_STEP_SUMMARY
+              echo "- **Audit Report:** Available in artifacts" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Development Builder (Updated)" >> $GITHUB_STEP_SUMMARY
+              echo "- \`${DOCKER_REPOSITORY}/dev:latest\`" >> $GITHUB_STEP_SUMMARY
+              echo "- \`${DOCKER_REPOSITORY}/dev:${DEV_VERSION}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- \`${DOCKER_REPOSITORY}/dev:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Production Builder (Not Updated)" >> $GITHUB_STEP_SUMMARY
+              echo "- \`${DOCKER_REPOSITORY}/builder:latest\` (unchanged)" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Build Information" >> $GITHUB_STEP_SUMMARY
+              echo "- **Build Type:** Daily development build (audit-driven)" >> $GITHUB_STEP_SUMMARY
+              echo "- **Dev Version:** \`${DEV_VERSION}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- **Production Version:** \`${VERSION}\` (unchanged)" >> $GITHUB_STEP_SUMMARY
+              echo "- **Date:** \`${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- **Trigger:** Package audit detected changes" >> $GITHUB_STEP_SUMMARY
+            else
+              # Build was skipped
+              echo "**Daily Build:** Skipped based on audit results" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### 🔍 Package Audit Results" >> $GITHUB_STEP_SUMMARY
+              echo "- **Status:** No build needed" >> $GITHUB_STEP_SUMMARY
+              echo "- **Reason:** ${{ steps.audit.outputs.change_summary }}" >> $GITHUB_STEP_SUMMARY
+              echo "- **Audit Report:** Available in artifacts" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Current Images (No Changes)" >> $GITHUB_STEP_SUMMARY
+              echo "- \`${DOCKER_REPOSITORY}/dev:latest\` (unchanged)" >> $GITHUB_STEP_SUMMARY
+              echo "- \`${DOCKER_REPOSITORY}/builder:latest\` (unchanged)" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Build Information" >> $GITHUB_STEP_SUMMARY
+              echo "- **Build Type:** Daily audit (no build executed)" >> $GITHUB_STEP_SUMMARY
+              echo "- **Current Version:** \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- **Date:** \`${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- **Next Audit:** Tomorrow at 02:00 UTC" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            # Production build summary
+            echo "**Production Build:** Both images updated" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Production Builder" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/builder:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/builder:${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/builder:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Development Builder" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/dev:latest\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/dev:${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${DOCKER_REPOSITORY}/dev:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Version Information" >> $GITHUB_STEP_SUMMARY
+            echo "- **Version:** \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Build Date:** \`${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **GitHub Release:** Created for v${VERSION}" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Usage Example" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${DOCKER_REPOSITORY}/builder:${VERSION}" >> $GITHUB_STEP_SUMMARY
-          echo "docker run --rm -v \${PWD}:/workspace ${DOCKER_REPOSITORY}/builder:${VERSION} pio run -e diag-esp32-c3" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "# Use development image (updated when changes detected)" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${DOCKER_REPOSITORY}/dev:latest" >> $GITHUB_STEP_SUMMARY
+            echo "docker run --rm -v \${PWD}:/workspace ${DOCKER_REPOSITORY}/dev:latest pio run -e diag-esp32-c3" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "# Use production image (stable)" >> $GITHUB_STEP_SUMMARY
+            echo "docker pull ${DOCKER_REPOSITORY}/builder:${VERSION}" >> $GITHUB_STEP_SUMMARY
+            echo "docker run --rm -v \${PWD}:/workspace ${DOCKER_REPOSITORY}/builder:${VERSION} pio run -e diag-esp32-c3" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

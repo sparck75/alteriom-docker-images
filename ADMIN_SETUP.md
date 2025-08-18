@@ -7,9 +7,9 @@ This document provides specific instructions for administrators to ensure the au
 The repository is **fully configured** for automated deployment with the following features:
 
 ### Automatic Triggers
-- ✅ **PR Merges**: Builds automatically when PRs are merged to main branch
-- ✅ **Daily Builds**: Runs daily at 02:00 UTC 
-- ✅ **Manual Dispatch**: Can be triggered manually from GitHub Actions tab
+- ✅ **PR Merges**: Builds both images automatically when PRs are merged to main branch
+- ✅ **Daily Builds**: Runs daily at 02:00 UTC (development image only - optimized for cost)
+- ✅ **Manual Dispatch**: Can be triggered manually from GitHub Actions tab (both images)
 
 ### Registry & Authentication
 - ✅ **GitHub Container Registry (GHCR)**: Pre-configured to use `ghcr.io/sparck75/alteriom-docker-images`
