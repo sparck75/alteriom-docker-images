@@ -267,7 +267,7 @@ jobs:
       
       - name: Upload Audit Report
         if: github.event_name == 'schedule'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: daily-audit-report
           path: audit-report.md
