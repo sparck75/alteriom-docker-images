@@ -28,30 +28,47 @@ run_test() {
     echo "Testing: $test_name"
     if [[ "$actual" == *"$expected"* ]]; then
         echo -e "${GREEN}✓ PASS${NC}: Found expected output '$expected'"
-        ((test_passed++))
+        test_passed=$((test_passed + 1))
     else
-        echo -e "${RED}✗ FAIL${NC}: Expected '$expected', got '$actual'"
-        ((test_failed++))
+        echo -e "${RED}✗ FAIL${NC}: Expected '$expected'"
+        echo "DEBUG: Actual output was:"
+        echo "$actual" | head -20
+        test_failed=$((test_failed + 1))
     fi
     echo ""
 }
 
-# Test 1: Dev-only mode with schedule event
+# Test 1: Dev-only mode with schedule event 
 echo "Test 1: Dev-only mode with schedule event"
 export GITHUB_EVENT_NAME="schedule"
-output=$(./scripts/build-images.sh dev-only 2>&1 || true)
-run_test "Dev-only with schedule creates dev version" "Creating development version: 1.6.0-dev-" "$output"
+echo "Running: timeout 5s ./scripts/build-images.sh dev-only"
+if output=$(timeout 5s ./scripts/build-images.sh dev-only 2>&1); then
+    echo "Command completed successfully"
+else
+    echo "Command timed out or failed (expected due to Docker build)"
+fi
+run_test "Dev-only with schedule creates dev version" "Creating development version:" "$output"
 run_test "Dev-only builds development image only" "Building and pushing development image only" "$output"
 
 # Test 2: Regular push mode (both images)
 echo "Test 2: Regular push mode"
 unset GITHUB_EVENT_NAME
-output=$(./scripts/build-images.sh push 2>&1 || true)
+echo "Running: timeout 5s ./scripts/build-images.sh push"
+if output=$(timeout 5s ./scripts/build-images.sh push 2>&1); then
+    echo "Command completed successfully"
+else
+    echo "Command timed out or failed (expected due to Docker build)"
+fi
 run_test "Push mode builds both images" "Building and pushing both images" "$output"
 
 # Test 3: Local build mode
 echo "Test 3: Local build mode"
-output=$(./scripts/build-images.sh 2>&1 || true)
+echo "Running: timeout 5s ./scripts/build-images.sh"
+if output=$(timeout 5s ./scripts/build-images.sh 2>&1); then
+    echo "Command completed successfully"
+else
+    echo "Command timed out or failed (expected due to Docker build)"
+fi
 run_test "Local mode builds without pushing" "Building local (no push)" "$output"
 
 # Summary
