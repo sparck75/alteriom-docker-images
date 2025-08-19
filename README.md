@@ -1,16 +1,13 @@
 # alteriom-docker-images
 
-[![Latest Release](https://img.shields.io/github/v/release/sparck75/alteriom-docker-images?label=Latest%20Version)](https://github.com/sparck75/alteriom-docker-images/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/sparck75/alteriom-docker-images?label=Production)](https://github.com/sparck75/alteriom-docker-images/releases/latest)
+[![Development Version](https://img.shields.io/badge/Development-1.6.1%2B%20(build%201)-orange?logo=docker)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fdev)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/sparck75/alteriom-docker-images/build-and-publish.yml?branch=main&label=Build%20Status)](https://github.com/sparck75/alteriom-docker-images/actions/workflows/build-and-publish.yml)
 [![License](https://img.shields.io/github/license/sparck75/alteriom-docker-images)](LICENSE)
 [![Last Commit](https://img.shields.io/github/last-commit/sparck75/alteriom-docker-images)](https://github.com/sparck75/alteriom-docker-images/commits/main)
 
-[![Production Image](https://img.shields.io/badge/docker-production%20builder-blue?logo=docker)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fbuilder)
-[![Development Image](https://img.shields.io/badge/docker-development%20builder-blue?logo=docker)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fdev)
-
-[![Dev Image Size](https://img.shields.io/docker/image-size/ghcr.io/sparck75/alteriom-docker-images/dev?label=Dev%20Image%20Size)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fdev)
-[![Dev Image Pulls](https://img.shields.io/docker/pulls/ghcr.io/sparck75/alteriom-docker-images/dev?label=Dev%20Pulls)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fdev)
-[![Dev Latest Tag](https://img.shields.io/docker/v/ghcr.io/sparck75/alteriom-docker-images/dev?label=Dev%20Latest&color=green)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fdev)
+[![Production Image](https://img.shields.io/badge/GHCR-production%20builder-blue?logo=github)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fbuilder)
+[![Development Image](https://img.shields.io/badge/GHCR-development%20builder-blue?logo=github)](https://github.com/sparck75/alteriom-docker-images/pkgs/container/alteriom-docker-images%2Fdev)
 
 Pre-built PlatformIO builder images for the Alteriom project (ESP32 / ESP32-C3 / ESP8266).
 
@@ -18,12 +15,26 @@ This repository contains optimized Dockerfiles and helper scripts to build and p
 
 **Status**: Docker tag generation issue has been fixed ✅
 
-Contents
+## Version Tracking
+
+The repository uses an automated badge system to show current version information:
+
+- **Production Badge**: Shows the latest stable release version from GitHub releases
+- **Development Badge**: Shows the current development version with incremental build numbers
+  - Format: `1.6.1+ (build N)` where N is an incremental build number starting from 1
+  - Updated automatically when development images are built
+  - Build numbers increment with each development build
+  - Links directly to the GHCR development package
+
+Development images are tagged with both `:latest` and versioned tags (e.g., `:1.6.1-dev-build.N`) to provide flexibility in CI/CD pipelines.
+
+## Contents
 - production/Dockerfile  — optimized minimal builder image with PlatformIO (ESP platforms installed at runtime)
 - development/Dockerfile — development image with extra tools and debugging utilities  
 - scripts/build-images.sh — build and push helper script
 - scripts/verify-images.sh — verify published images are available and working
 - OPTIMIZATION_GUIDE.md — detailed guide on image size optimizations
+- FIREWALL_CONFIGURATION.md — network access requirements and firewall allowlist
 
 Quick start
 
@@ -119,7 +130,8 @@ This repository includes a GitHub Actions workflow (`.github/workflows/build-and
 
 **🌅 Daily Builds (Optimized):** 
 - **Schedule**: Daily at 02:00 UTC, but **only builds the development image**
-- **Development versions**: Tagged with format `1.6.0-dev-YYYYMMDD` for date-specific tracking
+- **Development versions**: Tagged with format `1.6.1-dev-build.N` for incremental build tracking
+- **Version badge**: Automatically updated to show current development version (e.g., "1.6.1+ (build 2)")
 - **Cost optimization**: Reduces CI/CD resource usage by ~50% while maintaining development image freshness
 - **Production unchanged**: Stable production images remain unchanged during daily builds
 

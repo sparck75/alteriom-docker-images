@@ -188,6 +188,54 @@ jobs:
           echo "📋 Audit result: ${{ steps.audit.outputs.audit_result }}"
           echo "📋 Reason: ${{ steps.audit.outputs.change_summary }}"
       
+      - name: Update Development Badge
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        run: |
+          # Read current build number
+          if [ -f "BUILD_NUMBER" ]; then
+            BUILD_NUMBER=$(cat BUILD_NUMBER | tr -d '\n\r')
+          else
+            BUILD_NUMBER=1
+          fi
+          
+          # Increment build number for any development build
+          NEW_BUILD_NUMBER=$((BUILD_NUMBER + 1))
+          echo "$NEW_BUILD_NUMBER" > BUILD_NUMBER
+          
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ steps.audit.outputs.build_needed }}" = "true" ]; then
+            # Daily build executed - update with dev version and build number
+            DEV_VERSION="${{ env.VERSION }}-dev-build.${NEW_BUILD_NUMBER}"
+            BADGE_TEXT="Development-${{ env.VERSION }}%2B%20(build%20${NEW_BUILD_NUMBER})-orange"
+            echo "Updating development badge with version: ${{ env.VERSION }}+ (build ${NEW_BUILD_NUMBER})"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            # Production build - development badge shows next development version with + notation
+            BADGE_TEXT="Development-${{ env.VERSION }}%2B%20(build%20${NEW_BUILD_NUMBER})-orange"
+            echo "Updating development badge for production build: ${{ env.VERSION }}+ (build ${NEW_BUILD_NUMBER})"
+          else
+            # No build executed or not applicable
+            echo "No development badge update needed"
+            exit 0
+          fi
+          
+          # Update README.md with new badge
+          sed -i "s|Development-.*-orange|${BADGE_TEXT}|g" README.md
+          
+          # Check if changes were made
+          if git diff --quiet README.md BUILD_NUMBER; then
+            echo "No changes to README badge or build number needed"
+          else
+            echo "README badge and build number updated successfully"
+            
+            # Configure git for the bot
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            
+            # Commit and push changes
+            git add README.md BUILD_NUMBER
+            git commit -m "chore: update development badge to build ${NEW_BUILD_NUMBER} [skip ci]"
+            git push
+          fi
+
       - name: Test ESP Platform Builds
         if: github.event_name != 'schedule' || steps.audit.outputs.build_needed == 'true'
         env:
@@ -279,11 +327,18 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           DATE_TAG=$(date -u +%Y%m%d)
           
+          # Read build number for summary display
+          if [ -f "BUILD_NUMBER" ]; then
+            CURRENT_BUILD_NUMBER=$(cat BUILD_NUMBER | tr -d '\n\r')
+          else
+            CURRENT_BUILD_NUMBER=1
+          fi
+          
           if [ "${{ github.event_name }}" = "schedule" ]; then
             # Daily build summary
             if [ "${{ steps.audit.outputs.build_needed }}" = "true" ]; then
               # Build was executed
-              DEV_VERSION="${VERSION}-dev-${DATE_TAG}"
+              DEV_VERSION="${VERSION}-dev-build.${CURRENT_BUILD_NUMBER}"
               echo "**Daily Build:** Development image updated based on audit" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "### 🔍 Package Audit Results" >> $GITHUB_STEP_SUMMARY
@@ -294,7 +349,7 @@ jobs:
               echo "### Development Builder (Updated)" >> $GITHUB_STEP_SUMMARY
               echo "- \`${DOCKER_REPOSITORY}/dev:latest\`" >> $GITHUB_STEP_SUMMARY
               echo "- \`${DOCKER_REPOSITORY}/dev:${DEV_VERSION}\`" >> $GITHUB_STEP_SUMMARY
-              echo "- \`${DOCKER_REPOSITORY}/dev:${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- \`${DOCKER_REPOSITORY}/dev:build.${CURRENT_BUILD_NUMBER}\`" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "### Production Builder (Not Updated)" >> $GITHUB_STEP_SUMMARY
               echo "- \`${DOCKER_REPOSITORY}/builder:latest\` (unchanged)" >> $GITHUB_STEP_SUMMARY
@@ -303,7 +358,7 @@ jobs:
               echo "- **Build Type:** Daily development build (audit-driven)" >> $GITHUB_STEP_SUMMARY
               echo "- **Dev Version:** \`${DEV_VERSION}\`" >> $GITHUB_STEP_SUMMARY
               echo "- **Production Version:** \`${VERSION}\` (unchanged)" >> $GITHUB_STEP_SUMMARY
-              echo "- **Date:** \`${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+              echo "- **Build Number:** \`${CURRENT_BUILD_NUMBER}\`" >> $GITHUB_STEP_SUMMARY
               echo "- **Trigger:** Package audit detected changes" >> $GITHUB_STEP_SUMMARY
             else
               # Build was skipped
