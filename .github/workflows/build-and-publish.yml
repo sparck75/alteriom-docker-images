@@ -17,6 +17,47 @@ env:
   PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+      
+      - name: Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Run Dockerfile security scan
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: production/Dockerfile
+          format: sarif
+          output-file: hadolint-production.sarif
+          no-fail: true
+      
+      - name: Upload Dockerfile scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: hadolint-production.sarif
+
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
@@ -127,6 +168,61 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Using VERSION: $VERSION"
       
+      - name: Detect Changed Files
+        id: changes
+        if: github.event_name == 'push'
+        run: |
+          # Get list of changed files in the push
+          echo "Detecting changed files..."
+          
+          # For pushes, compare with previous commit
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD^ HEAD 2>/dev/null || echo "")
+          else
+            # For PR builds, get all changed files
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
+          fi
+          
+          echo "Changed files: $CHANGED_FILES"
+          
+          # Check if only documentation or non-critical files were changed
+          DOCS_ONLY="true"
+          BUILD_RELATED="false"
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changed files detected, proceeding with build"
+            DOCS_ONLY="false"
+          else
+            for file in $CHANGED_FILES; do
+              echo "Checking file: $file"
+              case "$file" in
+                *.md|*.txt|LICENSE|*.rst|docs/*|.gitignore|.github/ISSUE_TEMPLATE/*|.github/PULL_REQUEST_TEMPLATE/*)
+                  echo "  → Documentation/non-critical file"
+                  ;;
+                production/*|development/*|scripts/*|.github/workflows/*|VERSION|BUILD_NUMBER)
+                  echo "  → Build-related file"
+                  BUILD_RELATED="true"
+                  DOCS_ONLY="false"
+                  ;;
+                *)
+                  echo "  → Other file, considering as build-related"
+                  DOCS_ONLY="false"
+                  ;;
+              esac
+            done
+          fi
+          
+          echo "docs_only=$DOCS_ONLY" >> $GITHUB_OUTPUT
+          echo "build_related=$BUILD_RELATED" >> $GITHUB_OUTPUT
+          
+          if [ "$DOCS_ONLY" = "true" ]; then
+            echo "🚀 Only documentation files changed - build can be skipped"
+          elif [ "$BUILD_RELATED" = "true" ]; then
+            echo "🔧 Build-related files changed - build required"
+          else
+            echo "📋 Mixed changes detected - build required"
+          fi
+
       - name: Package Audit for Daily Builds
         id: audit
         if: github.event_name == 'schedule'
@@ -156,7 +252,10 @@ jobs:
           fi
 
       - name: Build and Push Images
-        if: github.event_name != 'schedule' || steps.audit.outputs.build_needed == 'true'
+        if: |
+          (github.event_name == 'schedule' && steps.audit.outputs.build_needed == 'true') ||
+          (github.event_name == 'push' && steps.changes.outputs.docs_only != 'true') ||
+          (github.event_name != 'schedule' && github.event_name != 'push')
         env:
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
           PLATFORMS: ${{ env.PLATFORMS }}
@@ -181,6 +280,13 @@ jobs:
             ./scripts/build-images.sh
           fi
 
+      - name: Skip Build (Documentation Only)
+        if: github.event_name == 'push' && steps.changes.outputs.docs_only == 'true'
+        run: |
+          echo "📚 Build skipped - only documentation files were changed"
+          echo "📋 This saves CI/CD resources while maintaining code quality"
+          echo "📋 Changed files contain only: documentation, README, license, or similar non-build files"
+
       - name: Skip Daily Build
         if: github.event_name == 'schedule' && steps.audit.outputs.build_needed == 'false'
         run: |
@@ -189,7 +295,10 @@ jobs:
           echo "📋 Reason: ${{ steps.audit.outputs.change_summary }}"
       
       - name: Update Development Badge
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+        if: |
+          github.ref == 'refs/heads/main' && 
+          ((github.event_name == 'push' && steps.changes.outputs.docs_only != 'true') ||
+           (github.event_name == 'schedule' && steps.audit.outputs.build_needed == 'true'))
         run: |
           # Read current build number
           if [ -f "BUILD_NUMBER" ]; then
@@ -237,7 +346,10 @@ jobs:
           fi
 
       - name: Test ESP Platform Builds
-        if: github.event_name != 'schedule' || steps.audit.outputs.build_needed == 'true'
+        if: |
+          (github.event_name == 'schedule' && steps.audit.outputs.build_needed == 'true') ||
+          (github.event_name == 'push' && steps.changes.outputs.docs_only != 'true') ||
+          (github.event_name != 'schedule' && github.event_name != 'push')
         env:
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
         run: |
@@ -256,7 +368,10 @@ jobs:
       
       - name: Generate Release Notes
         id: release_notes
-        if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
+        if: |
+          github.ref == 'refs/heads/main' && 
+          github.event_name != 'schedule' &&
+          (github.event_name != 'push' || steps.changes.outputs.docs_only != 'true')
         run: |
           # Get commits since last release
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
@@ -302,7 +417,10 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
+        if: |
+          github.ref == 'refs/heads/main' && 
+          github.event_name != 'schedule' &&
+          (github.event_name != 'push' || steps.changes.outputs.docs_only != 'true')
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
