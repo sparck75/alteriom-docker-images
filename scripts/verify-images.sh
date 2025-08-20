@@ -54,7 +54,8 @@ check_workflow_status() {
     fi
     
     local in_progress_count
-    in_progress_count=$(echo "$response" | grep -o '"status":"in_progress"' | wc -l || echo "0")
+    in_progress_count=$(echo "$response" | grep -o '"status":"in_progress"' | wc -l 2>/dev/null || echo "0")
+    in_progress_count=$(echo "$in_progress_count" | tr -d '\n\r ')
     
     if [ "$in_progress_count" -gt 0 ]; then
         print_warning "Found $in_progress_count workflow run(s) currently in progress"

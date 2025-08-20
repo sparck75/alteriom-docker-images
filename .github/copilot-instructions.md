@@ -48,6 +48,9 @@ alteriom-docker-images/
 # Comprehensive verification with GitHub Actions status (30-60 seconds)
 ./scripts/verify-images.sh
 
+# Validate workflow configuration (prevent duplicate builds)
+./scripts/validate-workflows.sh
+
 # Check for deprecated commands
 ./scripts/check-deprecated-commands.sh
 ```
@@ -178,10 +181,11 @@ git commit -m "feat!: breaking API changes"        # Major bump
 
 ### Workflow Priority
 1. **ALWAYS** verify images before use: `./scripts/verify-images.sh`
-2. **USE SEMANTIC COMMITS** for automated version management
-3. **NEVER CANCEL** long-running builds (can take 15-90 minutes)
-4. **TEST IMMEDIATELY** after any Dockerfile changes
-5. **USE TIMEOUTS** of 60+ minutes for local builds, 45+ minutes for CI builds
+2. **VALIDATE SINGLE WORKFLOW**: Ensure only ONE workflow exists per trigger to prevent duplicate builds
+3. **USE SEMANTIC COMMITS** for automated version management
+4. **NEVER CANCEL** long-running builds (can take 15-90 minutes)
+5. **TEST IMMEDIATELY** after any Dockerfile changes
+6. **USE TIMEOUTS** of 60+ minutes for local builds, 45+ minutes for CI builds
 
 ### Version Management Best Practices
 - **✅ Automated**: Version numbers increment automatically on PR merges
@@ -624,8 +628,7 @@ docker run --rm -v ${PWD}:/workspace \
 alteriom-docker-images/
 ├── .github/
 │   ├── workflows/
-│   │   ├── build-and-publish.yml    # Main CI/CD pipeline
-│   │   └── publish-mydocker.yml     # Alternative publishing workflow
+│   │   └── build-and-publish.yml    # Single CI/CD pipeline (ONLY workflow file)
 │   ├── copilot-instructions.md     # This file - Copilot development guide
 │   └── custom-instruction.md       # General AI agent instructions
 ├── production/
@@ -636,6 +639,7 @@ alteriom-docker-images/
 │   ├── build-images.sh            # Build and push helper
 │   ├── verify-images.sh           # Comprehensive verification
 │   ├── status-check.sh            # Quick status check  
+│   ├── validate-workflows.sh      # Workflow duplication prevention
 │   ├── test-esp-builds.sh         # ESP platform build testing
 │   ├── verify-admin-setup.sh      # Admin configuration verification
 │   ├── check-deprecated-commands.sh # PlatformIO command validation
@@ -657,14 +661,30 @@ alteriom-docker-images/
    - Check workflow execution details
    - Verify artifact publishing
 
-2. **Dockerfile validation**: 
+2. **Workflow validation**: **CRITICAL - Always validate only ONE workflow file exists**
+   ```bash
+   # Quick validation using the provided script
+   ./scripts/validate-workflows.sh
+   # Should show "VALIDATION PASSED"
+   
+   # Manual check of local workflow files
+   ls -la .github/workflows/
+   # Should show ONLY build-and-publish.yml
+   
+   # Check GitHub repository workflows (if gh CLI available)
+   gh api repos/sparck75/alteriom-docker-images/actions/workflows --jq '.workflows[] | .name'
+   # Should show ONLY "Build and Publish Docker Images" (excluding Copilot)
+   ```
+   ⚠️ **Multiple workflows = Duplicate builds = Cost overruns**
+
+3. **Dockerfile validation**: 
    ```bash
    # Verify syntax and build locally
    docker build -t test-build production/
    docker build -t test-build-dev development/
    ```
 
-3. **Version and image testing**:
+4. **Version and image testing**:
    ```bash
    # After any Dockerfile changes
    docker run --rm test-build --version
@@ -673,9 +693,11 @@ alteriom-docker-images/
 
 #### Configuration Files
 - **VERSION**: Controls image versioning and tags
-- **.github/workflows/build-and-publish.yml**: Main CI/CD configuration
+- **.github/workflows/build-and-publish.yml**: **ONLY** CI/CD configuration (single workflow file)
 - **production/Dockerfile**: Production image definition  
 - **development/Dockerfile**: Development image with extra tools
+
+⚠️ **CRITICAL**: Only ONE workflow file should exist in `.github/workflows/` to prevent duplicate builds
 
 #### Documentation Files
 - **README.md**: Public-facing usage documentation
