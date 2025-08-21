@@ -122,6 +122,56 @@ Automated tests verify that the Docker images can successfully build firmware fo
 
 The tests are automatically executed in the CI/CD pipeline after images are built, ensuring published images are fully functional.
 
+### Security Testing and Scanning 🔒
+
+The repository includes comprehensive security scanning to ensure safe and secure Docker images:
+
+#### Automated Security Scans
+
+**Multi-layer security scanning:**
+- **Filesystem vulnerabilities**: Trivy scans for known CVEs in all files
+- **Container image security**: Post-build vulnerability scanning of Docker images  
+- **Dockerfile security**: Hadolint checks both production and development Dockerfiles
+- **Python dependency scanning**: Safety checks for vulnerabilities in PlatformIO and dependencies
+- **Configuration security**: Infrastructure-as-code security analysis
+- **Malware detection**: ClamAV and YARA pattern-based malware scanning
+
+**Run security scans manually:**
+
+```bash
+# Enhanced security monitoring (comprehensive)
+./scripts/enhanced-security-monitoring.sh
+
+# Malware scanning specifically  
+./scripts/malware-scanner.sh
+
+# Quick security status check
+./scripts/verify-images.sh  # includes basic security validation
+```
+
+#### Security Features
+
+**Container security:**
+- ✅ Non-root user execution (UID 1000)
+- ✅ Minimal base images (python:3.11-slim)
+- ✅ No unnecessary packages or tools
+- ✅ Read-only filesystem capability
+- ✅ Security labels and metadata
+
+**Build security:**
+- ✅ Pinned dependency versions (PlatformIO 6.1.13)
+- ✅ Build tools removed after compilation
+- ✅ Package caches cleaned
+- ✅ Multi-platform builds (amd64, arm64)
+
+**Monitoring and compliance:**
+- ✅ SARIF integration with GitHub Security
+- ✅ 30-day scan result retention
+- ✅ Automated vulnerability alerts
+- ✅ Security policy enforcement
+
+See [SECURITY.md](SECURITY.md) for detailed security policy and vulnerability reporting.
+
 See [tests/README.md](tests/README.md) for detailed testing information.
 
 ## CI / Automated builds
@@ -141,6 +191,13 @@ This repository includes a GitHub Actions workflow (`.github/workflows/build-and
 - **Automated versioning**: Semantic version bumping based on commit message conventions
 
 **🧪 Automated testing:** After successful image builds, the workflow automatically runs ESP platform build tests to validate that the published images are fully functional for ESP32, ESP32-S3, ESP32-C3, and ESP8266 development. 
+
+**🔒 Security scanning:** Comprehensive security scanning runs in parallel with builds, including:
+- Vulnerability scanning (Trivy) for filesystem and containers
+- Dockerfile security analysis (Hadolint)  
+- Python dependency security checks (Safety)
+- Configuration and infrastructure security scanning
+- Results integrated with GitHub Security tab via SARIF
 
 **Setup required:** The workflow is pre-configured to use GitHub Container Registry (GHCR) and requires no additional secrets setup. The workflow uses the built-in `GITHUB_TOKEN` for authentication.
 

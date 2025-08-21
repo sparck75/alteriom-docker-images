@@ -28,23 +28,38 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy filesystem vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
           format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
+          output: 'trivy-fs-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
           ignore-unfixed: true
       
-      - name: Upload Trivy scan results to GitHub Security
+      - name: Upload Trivy filesystem scan results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: 'trivy-fs-results.sarif'
       
-      - name: Run Dockerfile security scan
+      - name: Run Trivy configuration scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-config-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+      
+      - name: Upload Trivy configuration scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-config-results.sarif'
+      
+      - name: Run production Dockerfile security scan
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: production/Dockerfile
@@ -52,11 +67,59 @@ jobs:
           output-file: hadolint-production.sarif
           no-fail: true
       
-      - name: Upload Dockerfile scan results
+      - name: Run development Dockerfile security scan
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: development/Dockerfile
+          format: sarif
+          output-file: hadolint-development.sarif
+          no-fail: true
+      
+      - name: Upload production Dockerfile scan results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: hadolint-production.sarif
+      
+      - name: Upload development Dockerfile scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: hadolint-development.sarif
+      
+      - name: Python dependency security scan
+        run: |
+          echo "🔍 Scanning Python dependencies for security vulnerabilities..."
+          python -m pip install --upgrade pip safety
+          
+          # Create requirements files from Dockerfiles
+          echo "platformio==6.1.13" > requirements-prod.txt
+          echo "platformio==6.1.13" > requirements-dev.txt
+          echo "twine" >> requirements-dev.txt
+          
+          # Scan dependencies for known vulnerabilities
+          echo "📋 Production dependencies scan:"
+          safety check --file requirements-prod.txt --output json --json > safety-prod.json || true
+          
+          echo "📋 Development dependencies scan:"
+          safety check --file requirements-dev.txt --output json --json > safety-dev.json || true
+          
+          # Display results
+          echo "Production security scan results:"
+          safety check --file requirements-prod.txt || echo "Security issues found in production dependencies"
+          
+          echo "Development security scan results:"
+          safety check --file requirements-dev.txt || echo "Security issues found in development dependencies"
+      
+      - name: Upload dependency scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-security-scan
+          path: |
+            safety-*.json
+            requirements-*.txt
+          retention-days: 30
 
   build-and-publish:
     runs-on: ubuntu-latest
@@ -365,6 +428,83 @@ jobs:
             # On PR branches, images are built locally with :local tag
             ./scripts/test-esp-builds.sh "${DOCKER_REPOSITORY}/builder:local" "${DOCKER_REPOSITORY}/dev:local"
           fi
+      
+      - name: Container Image Security Scan
+        if: |
+          (github.event_name == 'schedule' && steps.audit.outputs.build_needed == 'true') ||
+          (github.event_name == 'push' && steps.changes.outputs.docs_only != 'true') ||
+          (github.event_name != 'schedule' && github.event_name != 'push')
+        env:
+          DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
+        run: |
+          echo "🔍 Running container image security scans..."
+          
+          # Install Trivy for container scanning
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+          
+          # Determine which images to scan based on build type
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            IMAGES_TO_SCAN="${DOCKER_REPOSITORY}/dev:latest"
+            echo "📋 Daily build: Scanning development image only"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            IMAGES_TO_SCAN="${DOCKER_REPOSITORY}/builder:latest ${DOCKER_REPOSITORY}/dev:latest"
+            echo "📋 Production build: Scanning both images"
+          else
+            IMAGES_TO_SCAN="${DOCKER_REPOSITORY}/builder:local ${DOCKER_REPOSITORY}/dev:local"
+            echo "📋 PR build: Scanning local images"
+          fi
+          
+          # Create directory for scan results
+          mkdir -p container-scan-results
+          
+          # Scan each image
+          for image in $IMAGES_TO_SCAN; do
+            echo "🔍 Scanning container image: $image"
+            image_name=$(echo $image | sed 's/.*\///' | sed 's/:/-/')
+            
+            # High and critical vulnerabilities scan
+            trivy image --format json --output "container-scan-results/trivy-${image_name}-vulnerabilities.json" \
+              --severity HIGH,CRITICAL "$image" || echo "Vulnerabilities found in $image"
+            
+            # Configuration issues scan  
+            trivy image --format json --output "container-scan-results/trivy-${image_name}-config.json" \
+              --scanners config "$image" || echo "Configuration issues found in $image"
+            
+            # Generate human-readable report
+            trivy image --format table "$image" > "container-scan-results/trivy-${image_name}-report.txt" || true
+            
+            echo "📋 Security scan completed for $image"
+          done
+          
+          # Generate summary
+          echo "## Container Security Scan Summary 🔒" > container-scan-results/summary.md
+          echo "" >> container-scan-results/summary.md
+          echo "Scanned images:" >> container-scan-results/summary.md
+          for image in $IMAGES_TO_SCAN; do
+            echo "- \`$image\`" >> container-scan-results/summary.md
+          done
+          echo "" >> container-scan-results/summary.md
+          echo "Generated: $(date -u)" >> container-scan-results/summary.md
+          
+          # Display summary
+          cat container-scan-results/summary.md
+      
+      - name: Upload Container Security Scan Results
+        if: |
+          always() &&
+          ((github.event_name == 'schedule' && steps.audit.outputs.build_needed == 'true') ||
+           (github.event_name == 'push' && steps.changes.outputs.docs_only != 'true') ||
+           (github.event_name != 'schedule' && github.event_name != 'push'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-security-scan-results
+          path: container-scan-results/
+          retention-days: 30
       
       - name: Generate Release Notes
         id: release_notes
