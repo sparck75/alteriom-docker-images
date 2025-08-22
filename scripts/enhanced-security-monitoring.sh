@@ -139,15 +139,21 @@ scan_python_dependencies() {
     }
     
     if command_exists safety; then
-        # Scan production dependencies
+        # Scan production dependencies using modern scan command
         print_status "INFO" "Scanning production dependencies..."
-        safety check --file "$prod_deps" --json --output "$SCAN_RESULTS_DIR/safety-prod.json" || {
+        # Create a temporary directory with the requirements file for scanning
+        mkdir -p /tmp/safety-scan-prod
+        cp "$prod_deps" /tmp/safety-scan-prod/requirements.txt
+        (cd /tmp/safety-scan-prod && safety scan > "$PWD/$SCAN_RESULTS_DIR/safety-prod-report.txt" 2>&1) || {
             print_status "WARNING" "Security issues found in production dependencies"
         }
         
-        # Scan development dependencies
+        # Scan development dependencies using modern scan command
         print_status "INFO" "Scanning development dependencies..."
-        safety check --file "$dev_deps" --json --output "$SCAN_RESULTS_DIR/safety-dev.json" || {
+        # Create a temporary directory with the requirements file for scanning
+        mkdir -p /tmp/safety-scan-dev
+        cp "$dev_deps" /tmp/safety-scan-dev/requirements.txt
+        (cd /tmp/safety-scan-dev && safety scan > "$PWD/$SCAN_RESULTS_DIR/safety-dev-report.txt" 2>&1) || {
             print_status "WARNING" "Security issues found in development dependencies"
         }
         
