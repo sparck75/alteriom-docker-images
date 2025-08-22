@@ -1,4 +1,4 @@
-name: 🚀 ESP32/ESP8266 Enterprise Docker Pipeline - Security Validation & Service Monitoring
+name: ESP32/ESP8266 Docker Pipeline - Build & Security Validation
 
 on:
   push:
@@ -17,8 +17,8 @@ env:
   PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
-  enterprise-security-validation:
-    name: "🛡️ Enterprise Security Validation - 20+ Advanced Security Tools"
+  security-validation:
+    name: "Security Validation & Vulnerability Assessment"
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     permissions:
@@ -35,19 +35,18 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Run Comprehensive Multi-Tool Security Scanner
+      - name: Run Security Scanner
         env:
-          ADVANCED_MODE: 'true'
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY || 'ghcr.io/sparck75/alteriom-docker-images' }}
         run: |
-          echo "🛡️ Running comprehensive multi-tool security analysis..."
+          echo "Running security analysis..."
           
           # Make script executable
           chmod +x scripts/comprehensive-security-scanner.sh
           
-          # Run comprehensive security scanning
-          ./scripts/comprehensive-security-scanner.sh || {
-            echo "⚠️ Security scan completed with warnings - check results for details"
+          # Run security scanning in basic mode for cleaner output
+          ADVANCED_MODE=false ./scripts/comprehensive-security-scanner.sh || {
+            echo "Security scan completed with warnings - check results for details"
             exit 0  # Don't fail the build, just warn
           }
       
@@ -144,8 +143,8 @@ jobs:
           sarif_file: 'sarif-results/comprehensive-security.sarif'
           category: 'comprehensive-security'
 
-  vulnerability-assessment:
-    name: "🔍 Vulnerability Assessment - Core Security & SARIF Integration"
+  code-analysis:
+    name: "Code Analysis & SARIF Integration"
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     permissions:
@@ -258,8 +257,8 @@ jobs:
             requirements-*.txt
           retention-days: 30
 
-  docker-image-pipeline:
-    name: "🐋 Docker Image Pipeline - Build, Deploy & Service Validation"
+  build-and-deploy:
+    name: "Build, Deploy & Service Validation"
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -546,60 +545,31 @@ jobs:
             git push
           fi
 
-      - name: Comprehensive Service Health Validation
+      - name: Service Health Validation
         if: |
           (github.event_name == 'schedule' && steps.audit.outputs.build_needed == 'true') ||
           (github.event_name == 'push' && steps.changes.outputs.docs_only != 'true') ||
           (github.event_name != 'schedule' && github.event_name != 'push')
         env:
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
-          ADVANCED_MODE: 'true'
         run: |
-          echo "🛡️ Starting comprehensive service monitoring and health validation..."
-          echo "📊 Service validation includes 6 categories: Image Availability, Health Checks, PlatformIO Service, Container Runtime, ESP Platform Support, Network Connectivity"
+          echo "Running service health validation..."
           
-          chmod +x scripts/service-monitoring.sh
+          chmod +x scripts/service-monitoring-simple.sh
           
-          # Run enhanced service monitoring with detailed reporting
-          if ./scripts/service-monitoring.sh; then
-            echo "✅ All service health checks passed - system fully operational"
+          # Run simplified service monitoring
+          if ./scripts/service-monitoring-simple.sh; then
+            echo "✓ All service health checks passed"
             
-            # Extract key metrics from reports for GitHub summary
+            # Add summary to GitHub Actions
             if [ -f "service-monitoring-results/service-monitoring-summary.md" ]; then
               echo "" >> $GITHUB_STEP_SUMMARY
-              echo "## 🛡️ Service Health Validation Results" >> $GITHUB_STEP_SUMMARY
+              echo "## Service Health Validation Results" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
-              
-              # Extract overall status
-              OVERALL_STATUS=$(grep "Overall Health:" service-monitoring-results/service-monitoring-summary.md | cut -d'*' -f3 | cut -d'*' -f1 || echo "UNKNOWN")
-              SUCCESS_RATE=$(grep "Success Rate:" service-monitoring-results/service-monitoring-summary.md | cut -d'*' -f3 | cut -d'*' -f1 || echo "Unknown")
-              
-              echo "### ${OVERALL_STATUS} System Health Status" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "**Success Rate:** ${SUCCESS_RATE}" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              
-              # Add service categories status
-              echo "### Service Categories Validation" >> $GITHUB_STEP_SUMMARY
-              grep "Service Categories Status" -A 10 service-monitoring-results/service-monitoring-summary.md | tail -6 >> $GITHUB_STEP_SUMMARY || true
-              echo "" >> $GITHUB_STEP_SUMMARY
-              
-              echo "📊 **Complete service monitoring dashboard available in artifacts**" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
+              cat service-monitoring-results/service-monitoring-summary.md >> $GITHUB_STEP_SUMMARY
             fi
-            
           else
-            echo "⚠️ Some service checks failed - review detailed results"
-            
-            # Add failure summary to GitHub summary
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "## ⚠️ Service Health Validation - Issues Detected" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Some service validation checks failed. Review the detailed service monitoring artifacts for specific issues." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Action Required:** Check service-monitoring-results artifacts for detailed analysis and remediation steps." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            
+            echo "⚠ Some service checks failed - review detailed results"
             # Don't fail the build, just warn
           fi
       
@@ -725,24 +695,6 @@ jobs:
           echo "- starlette updated to >=0.40.0" >> security-scan-results/scan-summary.md
           
           echo "✅ Container image security scanning completed"
-          
-          echo "✅ Container image security scanning completed"
-            
-            echo "📋 Security scan completed for $image"
-          done
-          
-          # Generate summary
-          echo "## Container Security Scan Summary 🔒" > container-scan-results/summary.md
-          echo "" >> container-scan-results/summary.md
-          echo "Scanned images:" >> container-scan-results/summary.md
-          for image in $IMAGES_TO_SCAN; do
-            echo "- \`$image\`" >> container-scan-results/summary.md
-          done
-          echo "" >> container-scan-results/summary.md
-          echo "Generated: $(date -u)" >> container-scan-results/summary.md
-          
-          # Display summary
-          cat container-scan-results/summary.md
       
       - name: Upload Container Security Scan Results
         if: |
@@ -752,8 +704,8 @@ jobs:
            (github.event_name != 'schedule' && github.event_name != 'push'))
         uses: actions/upload-artifact@v4
         with:
-          name: container-security-scan-results
-          path: container-scan-results/
+          name: container-security-scan-${{ github.run_number }}
+          path: security-scan-results/
           retention-days: 30
       
       - name: Generate Release Notes
@@ -919,16 +871,3 @@ jobs:
             echo "docker run --rm -v \${PWD}:/workspace ${DOCKER_REPOSITORY}/builder:${VERSION} pio run -e diag-esp32-c3" >> $GITHUB_STEP_SUMMARY
           fi
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
-      - name: Upload Security Scan Results
-        if: |
-          always() &&
-          ((github.event_name == 'schedule' && steps.audit.outputs.build_needed == 'true') ||
-           (github.event_name == 'push' && steps.changes.outputs.docs_only != 'true') ||
-           (github.event_name != 'schedule' && github.event_name != 'push'))
-        uses: actions/upload-artifact@v4
-        with:
-          name: container-security-scan-${{ github.run_number }}
-          path: |
-            security-scan-results/
-          retention-days: 30

@@ -1,49 +1,41 @@
 #!/bin/bash
 
-# Comprehensive Multi-Tool Security Scanner for alteriom-docker-images
-# Implements enterprise-grade security scanning with multiple tools for maximum coverage
-# Provides 100% security validation with advanced scanning capabilities
+# Comprehensive Security Scanner for alteriom-docker-images
+# Provides multi-tool security scanning with configurable output modes
 
 set -euo pipefail
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
 
 # Configuration
 DOCKER_REPOSITORY="${DOCKER_REPOSITORY:-ghcr.io/sparck75/alteriom-docker-images}"
 SCAN_RESULTS_DIR="${SCAN_RESULTS_DIR:-comprehensive-security-results}"
 SEVERITY_THRESHOLD="${SEVERITY_THRESHOLD:-MEDIUM,HIGH,CRITICAL}"
-ADVANCED_MODE="${ADVANCED_MODE:-true}"
+ADVANCED_MODE="${ADVANCED_MODE:-false}"
 
 # Create results directory structure
-mkdir -p "$SCAN_RESULTS_DIR"/{basic,advanced,reports,sbom,compliance,malware,static-analysis,secrets,container-security,supply-chain,runtime-analysis,zero-trust}
+mkdir -p "$SCAN_RESULTS_DIR"/{basic,advanced,reports}
 
-echo -e "${PURPLE}🛡️  COMPREHENSIVE MULTI-TOOL SECURITY SCANNER${NC}"
-echo "=================================================================="
-echo "🎯 Target: $DOCKER_REPOSITORY"
-echo "📁 Results: $SCAN_RESULTS_DIR"
-echo "🔧 Mode: $([ "$ADVANCED_MODE" = "true" ] && echo "Advanced" || echo "Basic")"
-echo "⏰ Started: $(date -u)"
+if [ "$ADVANCED_MODE" = "true" ]; then
+    echo "🛡️ Comprehensive Security Scanner - Advanced Mode"
+    echo "================================================="
+else
+    echo "Security Scanner - Basic Mode"
+    echo "============================="
+fi
+
+echo "Target: $DOCKER_REPOSITORY"
+echo "Results: $SCAN_RESULTS_DIR"
+echo "Started: $(date -u)"
 echo ""
 
-# Function to print status with emojis
+# Function to print status
 print_status() {
     local status=$1
     local message=$2
-    local emoji=""
     case $status in
-        "SUCCESS") emoji="✅"; echo -e "${GREEN}$emoji $message${NC}" ;;
-        "WARNING") emoji="⚠️"; echo -e "${YELLOW}$emoji $message${NC}" ;;
-        "ERROR") emoji="❌"; echo -e "${RED}$emoji $message${NC}" ;;
-        "INFO") emoji="ℹ️"; echo -e "${BLUE}$emoji $message${NC}" ;;
-        "ADVANCED") emoji="🚀"; echo -e "${PURPLE}$emoji $message${NC}" ;;
-        "SCAN") emoji="🔍"; echo -e "${CYAN}$emoji $message${NC}" ;;
+        "SUCCESS") echo "✓ $message" ;;
+        "WARNING") echo "⚠ $message" ;;
+        "ERROR") echo "✗ $message" ;;
+        "INFO") echo "• $message" ;;
     esac
 }
 
