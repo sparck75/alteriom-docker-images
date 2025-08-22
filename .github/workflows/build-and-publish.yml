@@ -708,6 +708,38 @@ jobs:
           path: security-scan-results/
           retention-days: 30
       
+      - name: Run Comprehensive Security Analysis for Release Notes
+        if: |
+          github.ref == 'refs/heads/main' && 
+          github.event_name != 'schedule' &&
+          (github.event_name != 'push' || steps.changes.outputs.docs_only != 'true')
+        run: |
+          echo "🛡️ Running comprehensive security analysis for release notes..."
+          
+          # Make security scripts executable
+          chmod +x scripts/comprehensive-security-scanner.sh
+          chmod +x scripts/vulnerability-correlation-engine.sh
+          
+          # Run comprehensive security scanner
+          echo "🔍 Running comprehensive security scanner..."
+          ./scripts/comprehensive-security-scanner.sh || echo "⚠️ Security scanner completed with warnings"
+          
+          # Run vulnerability correlation engine (Phase 2B)
+          echo "🔗 Running vulnerability correlation engine..."
+          ./scripts/vulnerability-correlation-engine.sh || echo "⚠️ Correlation engine completed with warnings"
+          
+          # Create summary of security results for release notes
+          echo "📊 Creating security scan summary..."
+          if [ -d "comprehensive-security-results" ]; then
+            echo "✅ Security scan results available for release notes"
+            ls -la comprehensive-security-results/ || true
+          else
+            echo "⚠️ No comprehensive security results found"
+          fi
+          
+          # Ensure security scan artifacts are preserved
+          echo "📁 Security scan artifacts prepared for release documentation"
+      
       - name: Generate Enhanced Release Notes
         id: release_notes
         if: |
@@ -718,8 +750,8 @@ jobs:
           # Make the enhanced release notes generator executable
           chmod +x scripts/generate-enhanced-release-notes.sh
           
-          # Generate enhanced release notes with detailed analysis
-          echo "🚀 Generating enhanced release notes with detailed change analysis..."
+          # Generate enhanced release notes with detailed analysis and security results
+          echo "🚀 Generating enhanced release notes with security analysis..."
           ./scripts/generate-enhanced-release-notes.sh "${{ env.VERSION }}" "${{ env.DOCKER_REPOSITORY }}" "release_notes.md"
           
           # Verify the release notes were generated
@@ -767,6 +799,22 @@ jobs:
         with:
           name: daily-audit-report
           path: audit-report.md
+          retention-days: 30
+
+      - name: Upload Security Analysis Results
+        if: |
+          github.ref == 'refs/heads/main' && 
+          github.event_name != 'schedule' &&
+          (github.event_name != 'push' || steps.changes.outputs.docs_only != 'true')
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-analysis-results-${{ github.run_number }}
+          path: |
+            comprehensive-security-results/
+            security-scan-results/
+            *.sarif
+            safety-*.json
+            release_notes.md
           retention-days: 30
 
       - name: Image Summary
