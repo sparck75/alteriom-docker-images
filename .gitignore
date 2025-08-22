@@ -32,3 +32,8 @@ node_modules/
 # Security scan results (temporary)
 security-scan-results/
 malware-scan-results/
+comprehensive-security-results/
+demo-security-results/
+sarif-results/
+*.sarif
+safety-*.json

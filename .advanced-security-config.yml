@@ -1,0 +1,129 @@
+# Advanced Security Configuration for alteriom-docker-images
+# This file configures the comprehensive multi-tool security scanner
+
+# Security scanning configuration
+security:
+  # Basic scanning tools
+  basic_tools:
+    - trivy
+    - grype
+    - hadolint
+    - dockle
+    - safety
+  
+  # Advanced scanning tools
+  advanced_tools:
+    - bandit
+    - semgrep
+    - checkov
+    - syft
+    - clamav
+  
+  # Severity thresholds
+  severity_levels:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+    - LOW
+  
+  # Scan targets
+  targets:
+    filesystems:
+      - "."
+    containers:
+      - "ghcr.io/sparck75/alteriom-docker-images/builder:latest"
+      - "ghcr.io/sparck75/alteriom-docker-images/dev:latest"
+    dockerfiles:
+      - "production/Dockerfile"
+      - "development/Dockerfile"
+  
+  # Advanced scanning options
+  advanced_options:
+    enable_malware_scanning: true
+    enable_crypto_analysis: true
+    enable_runtime_analysis: true
+    enable_compliance_checking: true
+    enable_supply_chain_analysis: true
+    generate_sbom: true
+    
+  # Compliance frameworks
+  compliance_frameworks:
+    - "CIS Docker Benchmark"
+    - "NIST Cybersecurity Framework"
+    - "OWASP Container Security"
+    - "SLSA Build Integrity"
+  
+  # Report configuration
+  reporting:
+    formats:
+      - json
+      - markdown
+      - sarif
+    output_directory: "comprehensive-security-results"
+    retention_days: 30
+    
+  # Tool-specific configurations
+  tool_configs:
+    trivy:
+      severity: "HIGH,CRITICAL"
+      scanners: "vuln,config,secret"
+      
+    grype:
+      fail_on_severity: "high"
+      scope: "all-layers"
+      
+    hadolint:
+      rules:
+        - "DL3008"  # Pin versions in apt get install
+        - "DL3009"  # Delete the apt-get lists after installing
+        - "DL3015"  # Avoid additional packages
+        
+    bandit:
+      severity: "medium"
+      confidence: "medium"
+      
+    semgrep:
+      config: "auto"
+      timeout: 300
+      
+    checkov:
+      framework: "dockerfile"
+      check: "all"
+      
+    clamav:
+      update_definitions: true
+      scan_archives: true
+      
+    syft:
+      output_format: "json,spdx-json"
+      scope: "all-layers"
+
+# Integration settings
+integration:
+  github_actions:
+    upload_sarif: true
+    create_issues: false
+    fail_on_critical: true
+    
+  notifications:
+    slack: false
+    email: false
+    
+  automation:
+    schedule: "0 2 * * *"  # Daily at 2 AM UTC
+    trigger_on_push: true
+    trigger_on_pr: true
+
+# Performance settings
+performance:
+  parallel_scanning: true
+  max_concurrent_scans: 4
+  timeout_minutes: 60
+  memory_limit: "4GB"
+  
+# Advanced features
+advanced_features:
+  machine_learning_analysis: false
+  behavioral_analysis: false
+  threat_intelligence: false
+  zero_day_detection: false

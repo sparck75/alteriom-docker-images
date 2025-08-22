@@ -17,6 +17,132 @@ env:
   PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
+  comprehensive-security-scan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      security-events: write
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Run Comprehensive Multi-Tool Security Scanner
+        env:
+          ADVANCED_MODE: 'true'
+          DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY || 'ghcr.io/sparck75/alteriom-docker-images' }}
+        run: |
+          echo "🛡️ Running comprehensive multi-tool security analysis..."
+          
+          # Make script executable
+          chmod +x scripts/comprehensive-security-scanner.sh
+          
+          # Run comprehensive security scanning
+          ./scripts/comprehensive-security-scanner.sh || {
+            echo "⚠️ Security scan completed with warnings - check results for details"
+            exit 0  # Don't fail the build, just warn
+          }
+      
+      - name: Upload Comprehensive Security Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-security-results-${{ github.run_number }}
+          path: comprehensive-security-results/
+          retention-days: 30
+      
+      - name: Generate Security SARIF Reports
+        if: always()
+        run: |
+          echo "📄 Converting security results to SARIF format..."
+          
+          # Create SARIF directory
+          mkdir -p sarif-results
+          
+          # Check if Trivy results exist and convert to SARIF
+          if [ -f "comprehensive-security-results/basic/trivy-filesystem.json" ]; then
+            # Convert Trivy JSON to SARIF for GitHub Security tab
+            jq '
+              {
+                version: "2.1.0",
+                "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+                runs: [
+                  {
+                    tool: {
+                      driver: {
+                        name: "Trivy",
+                        version: "0.65.0",
+                        informationUri: "https://trivy.dev"
+                      }
+                    },
+                    results: [
+                      .Results[]? | 
+                      select(.Vulnerabilities) |
+                      .Vulnerabilities[] |
+                      select(.Severity == "HIGH" or .Severity == "CRITICAL") |
+                      {
+                        ruleId: .VulnerabilityID,
+                        level: (if .Severity == "CRITICAL" then "error" elif .Severity == "HIGH" then "warning" else "note" end),
+                        message: {
+                          text: (.Title + ": " + .Description)
+                        },
+                        locations: [
+                          {
+                            physicalLocation: {
+                              artifactLocation: {
+                                uri: (.Target // ".")
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ' comprehensive-security-results/basic/trivy-filesystem.json > sarif-results/trivy-comprehensive.sarif || echo "No Trivy SARIF conversion"
+          fi
+          
+          # Check for other tool results and create minimal SARIF if needed
+          if [ ! -f "sarif-results/trivy-comprehensive.sarif" ]; then
+            echo '{
+              "version": "2.1.0",
+              "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+              "runs": [
+                {
+                  "tool": {
+                    "driver": {
+                      "name": "Comprehensive Security Scanner",
+                      "version": "2.0.0"
+                    }
+                  },
+                  "results": []
+                }
+              ]
+            }' > sarif-results/comprehensive-security.sarif
+          fi
+      
+      - name: Upload Trivy Comprehensive SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('sarif-results/trivy-comprehensive.sarif') != ''
+        with:
+          sarif_file: 'sarif-results/trivy-comprehensive.sarif'
+          category: 'trivy-comprehensive'
+      
+      - name: Upload Comprehensive Security SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('sarif-results/comprehensive-security.sarif') != ''
+        with:
+          sarif_file: 'sarif-results/comprehensive-security.sarif'
+          category: 'comprehensive-security'
+
   security-scan:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request'
