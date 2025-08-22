@@ -1,4 +1,4 @@
-name: 🐋 ESP32/ESP8266 Docker Images - Build, Scan & Deploy
+name: 🚀 ESP32/ESP8266 Enterprise Docker Pipeline - Security Validation & Service Monitoring
 
 on:
   push:
@@ -18,6 +18,7 @@ env:
 
 jobs:
   enterprise-security-validation:
+    name: "🛡️ Enterprise Security Validation - 20+ Advanced Security Tools"
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     permissions:
@@ -144,6 +145,7 @@ jobs:
           category: 'comprehensive-security'
 
   vulnerability-assessment:
+    name: "🔍 Vulnerability Assessment - Core Security & SARIF Integration"
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     permissions:
@@ -257,6 +259,7 @@ jobs:
           retention-days: 30
 
   docker-image-pipeline:
+    name: "🐋 Docker Image Pipeline - Build, Deploy & Service Validation"
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -543,23 +546,60 @@ jobs:
             git push
           fi
 
-      - name: Service Health Validation
+      - name: Comprehensive Service Health Validation
         if: |
           (github.event_name == 'schedule' && steps.audit.outputs.build_needed == 'true') ||
           (github.event_name == 'push' && steps.changes.outputs.docs_only != 'true') ||
           (github.event_name != 'schedule' && github.event_name != 'push')
         env:
           DOCKER_REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
+          ADVANCED_MODE: 'true'
         run: |
-          echo "🛡️ Running comprehensive service monitoring and health validation..."
+          echo "🛡️ Starting comprehensive service monitoring and health validation..."
+          echo "📊 Service validation includes 6 categories: Image Availability, Health Checks, PlatformIO Service, Container Runtime, ESP Platform Support, Network Connectivity"
           
           chmod +x scripts/service-monitoring.sh
           
-          # Run service monitoring
+          # Run enhanced service monitoring with detailed reporting
           if ./scripts/service-monitoring.sh; then
-            echo "✅ All service health checks passed"
+            echo "✅ All service health checks passed - system fully operational"
+            
+            # Extract key metrics from reports for GitHub summary
+            if [ -f "service-monitoring-results/service-monitoring-summary.md" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "## 🛡️ Service Health Validation Results" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              
+              # Extract overall status
+              OVERALL_STATUS=$(grep "Overall Health:" service-monitoring-results/service-monitoring-summary.md | cut -d'*' -f3 | cut -d'*' -f1 || echo "UNKNOWN")
+              SUCCESS_RATE=$(grep "Success Rate:" service-monitoring-results/service-monitoring-summary.md | cut -d'*' -f3 | cut -d'*' -f1 || echo "Unknown")
+              
+              echo "### ${OVERALL_STATUS} System Health Status" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Success Rate:** ${SUCCESS_RATE}" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              
+              # Add service categories status
+              echo "### Service Categories Validation" >> $GITHUB_STEP_SUMMARY
+              grep "Service Categories Status" -A 10 service-monitoring-results/service-monitoring-summary.md | tail -6 >> $GITHUB_STEP_SUMMARY || true
+              echo "" >> $GITHUB_STEP_SUMMARY
+              
+              echo "📊 **Complete service monitoring dashboard available in artifacts**" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+            
           else
-            echo "⚠️ Some service checks failed - review results"
+            echo "⚠️ Some service checks failed - review detailed results"
+            
+            # Add failure summary to GitHub summary
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## ⚠️ Service Health Validation - Issues Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Some service validation checks failed. Review the detailed service monitoring artifacts for specific issues." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Action Required:** Check service-monitoring-results artifacts for detailed analysis and remediation steps." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
             # Don't fail the build, just warn
           fi
       
