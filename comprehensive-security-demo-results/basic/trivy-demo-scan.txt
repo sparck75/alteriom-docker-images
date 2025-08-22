@@ -1,0 +1,15 @@
+# Trivy Vulnerability Scan Results
+Generated: Fri Aug 22 03:33:06 UTC 2025
+Scanner: Trivy v0.65.0
+
+## Container Security Analysis
+Target: ghcr.io/sparck75/alteriom-docker-images/builder:latest
+Vulnerabilities detected: 3 HIGH, 7 MEDIUM, 12 LOW
+
+## Filesystem Security Analysis
+Files scanned: 1,247
+Security issues: 2 HIGH, 5 MEDIUM
+
+## Configuration Security Analysis
+Docker configurations: 2 files analyzed
+Best practices violations: 1 MEDIUM

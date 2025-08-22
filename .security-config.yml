@@ -1,0 +1,132 @@
+# Security Configuration for alteriom-docker-images
+
+# Trivy configuration for enhanced scanning
+# This file configures vulnerability scanning behavior
+
+# Severity levels to scan for
+severity:
+  - CRITICAL
+  - HIGH
+  - MEDIUM
+
+# Skip unfixed vulnerabilities (focus on actionable items)
+ignore-unfixed: true
+
+# Scan timeout (in seconds)
+timeout: 15m
+
+# Skip files/directories from scanning
+skip-files:
+  - ".git/**"
+  - "node_modules/**"
+  - "*.md"
+  - "*.txt"
+  - "tests/test-projects/**"
+
+# Skip specific vulnerability IDs (if needed for false positives)
+# Add CVE IDs here that are confirmed false positives
+skip-vulnerabilities: []
+
+# Security scanning policy
+policy:
+  # Fail build on CRITICAL vulnerabilities
+  fail-on-critical: true
+  
+  # Warn on HIGH vulnerabilities
+  warn-on-high: true
+  
+  # Maximum age for security databases (days)
+  max-db-age: 1
+
+# Container image scanning options
+container:
+  # Scan layers individually
+  scan-layers: true
+  
+  # Remove intermediate containers after scanning
+  cleanup: true
+  
+  # Security context requirements
+  security-context:
+    run-as-non-root: true
+    run-as-user: 1000
+    read-only-root-filesystem: true
+
+# Python dependency scanning
+python:
+  # Packages to always scan
+  required-packages:
+    - platformio
+    - pip
+    - setuptools
+  
+  # Known secure versions
+  secure-versions:
+    platformio: "6.1.13"
+  
+  # Exclude development-only packages from critical scanning
+  dev-only-packages:
+    - twine
+    - pytest
+    - black
+    - flake8
+
+# Dockerfile security rules
+dockerfile:
+  # Required security practices
+  required-practices:
+    - non-root-user
+    - minimal-base-image
+    - package-cleanup
+    - version-pinning
+  
+  # Prohibited practices
+  prohibited:
+    - privileged-mode
+    - host-network
+    - sudo-usage
+    - package-managers-in-final-layer
+
+# Monitoring and alerting
+monitoring:
+  # Retention period for scan results (days)
+  retention-days: 30
+  
+  # Alert thresholds
+  alerts:
+    critical-threshold: 0
+    high-threshold: 5
+    medium-threshold: 20
+  
+  # Notification channels
+  notifications:
+    github-security: true
+    email-alerts: false
+    slack-alerts: false
+
+# Compliance requirements
+compliance:
+  # Standards to check against
+  standards:
+    - cis-docker-benchmark
+    - nist-cybersecurity-framework
+    - owasp-container-security
+  
+  # Required metadata in images
+  required-labels:
+    - org.opencontainers.image.title
+    - org.opencontainers.image.description
+    - org.opencontainers.image.version
+    - org.opencontainers.image.source
+    - org.opencontainers.image.licenses
+
+# Automated remediation
+auto-fix:
+  # Enable automatic dependency updates for security fixes
+  enable-dependency-updates: true
+  
+  # Auto-merge security patches for low-risk changes
+  auto-merge-security-patches: false
+  
+  # Maximum security fix delay (hours)
+  max-fix-delay: 24

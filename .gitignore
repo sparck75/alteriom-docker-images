@@ -28,3 +28,15 @@ node_modules/
 # Secrets
 .env
 .secret
+
+# Security scan results (temporary)
+security-scan-results/
+malware-scan-results/
+comprehensive-security-results/
+demo-security-results/
+sarif-results/
+*.sarif
+safety-*.json
+
+# Service monitoring results
+service-monitoring-results/
