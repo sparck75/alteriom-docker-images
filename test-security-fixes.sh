@@ -69,7 +69,7 @@ if [[ -d "test-security-results" ]] && [[ -f "test-security-results/basic/scan-s
     # Show created content
     echo ""
     echo "📋 Created scan status:"
-    cat test-security-results/basic/scan-status.json | head -10
+    head -10 test-security-results/basic/scan-status.json
     
     # Cleanup
     rm -rf test-security-results
