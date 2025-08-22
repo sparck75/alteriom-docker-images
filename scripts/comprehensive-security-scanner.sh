@@ -5,14 +5,45 @@
 
 set -euo pipefail
 
+# Enhanced error handling with meaningful messages
+error_handler() {
+    local line_no=$1
+    local error_code=$2
+    echo "❌ Security scan failed at line $line_no (exit code: $error_code)" >&2
+    echo "🔍 Check the logs above for specific error details" >&2
+    echo "📊 Partial results may be available in: ${SCAN_RESULTS_DIR:-comprehensive-security-results}" >&2
+    exit $error_code
+}
+
+# Set up error trap
+trap 'error_handler ${LINENO} $?' ERR
+
 # Configuration
 DOCKER_REPOSITORY="${DOCKER_REPOSITORY:-ghcr.io/sparck75/alteriom-docker-images}"
 SCAN_RESULTS_DIR="${SCAN_RESULTS_DIR:-comprehensive-security-results}"
 SEVERITY_THRESHOLD="${SEVERITY_THRESHOLD:-MEDIUM,HIGH,CRITICAL}"
 ADVANCED_MODE="${ADVANCED_MODE:-false}"
 
+# Color definitions for output formatting
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
+
+# Check if terminal supports colors (disable in CI/non-interactive environments)
+if [[ ! -t 1 ]] || [[ "${NO_COLOR:-}" ]] || [[ "${CI:-}" ]]; then
+    RED='' GREEN='' YELLOW='' BLUE='' PURPLE='' CYAN='' WHITE='' NC=''
+fi
+
 # Create results directory structure
-mkdir -p "$SCAN_RESULTS_DIR"/{basic,advanced,reports}
+mkdir -p "$SCAN_RESULTS_DIR"/{basic,advanced,reports,artifacts,sarif}
+
+# Ensure directories are writable
+chmod -R 755 "$SCAN_RESULTS_DIR" 2>/dev/null || true
 
 if [ "$ADVANCED_MODE" = "true" ]; then
     echo "🛡️ Comprehensive Security Scanner - Advanced Mode"
@@ -42,6 +73,36 @@ print_status() {
 # Function to check if command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
+}
+
+# Function to create basic results structure
+create_basic_results_structure() {
+    print_status "INFO" "Creating security results structure..."
+    
+    # Create basic scan result placeholder
+    cat > "$SCAN_RESULTS_DIR/basic/scan-status.json" << EOF
+{
+  "scan_started": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "scanner_version": "2.0.0",
+  "mode": "${ADVANCED_MODE}",
+  "target": "${DOCKER_REPOSITORY}",
+  "status": "in_progress"
+}
+EOF
+
+    # Create basic summary file
+    cat > "$SCAN_RESULTS_DIR/scan-summary.txt" << EOF
+Security Scan Summary
+====================
+Started: $(date -u)
+Target: ${DOCKER_REPOSITORY}
+Mode: $([ "$ADVANCED_MODE" = "true" ] && echo "Advanced (20+ tools)" || echo "Basic (8+ tools)")
+Results Directory: ${SCAN_RESULTS_DIR}
+
+Scan Status: IN PROGRESS
+EOF
+
+    print_status "SUCCESS" "Basic results structure created"
 }
 
 # Install comprehensive security toolset with 20+ enterprise tools
@@ -1310,6 +1371,9 @@ EOF
 main() {
     echo -e "${PURPLE}🚀 Starting comprehensive multi-tool security analysis...${NC}"
     echo ""
+    
+    # Ensure basic results structure exists
+    create_basic_results_structure
     
     # Install comprehensive toolset
     install_security_toolset

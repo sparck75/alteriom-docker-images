@@ -233,19 +233,19 @@ jobs:
           echo "starlette>=0.40.0" >> requirements-dev.txt
           echo "twine" >> requirements-dev.txt
           
-          # Scan dependencies for known vulnerabilities using modern Safety CLI
+          # Scan dependencies for known vulnerabilities using corrected Safety CLI syntax
           echo "📋 Production dependencies scan:"
-          safety scan --output json --save-as json safety-prod.json --target requirements-prod.txt || true
+          safety scan --file requirements-prod.txt --output json --save-as safety-prod.json || true
           
           echo "📋 Development dependencies scan:"
-          safety scan --output json --save-as json safety-dev.json --target requirements-dev.txt || true
+          safety scan --file requirements-dev.txt --output json --save-as safety-dev.json || true
           
-          # Display results
+          # Display results with corrected syntax
           echo "Production security scan results:"
-          safety scan --target requirements-prod.txt || echo "Security issues found in production dependencies"
+          safety scan --file requirements-prod.txt || echo "Security issues found in production dependencies"
           
           echo "Development security scan results:"
-          safety scan --target requirements-dev.txt || echo "Security issues found in development dependencies"
+          safety scan --file requirements-dev.txt || echo "Security issues found in development dependencies"
       
       - name: Upload dependency scan results
         uses: actions/upload-artifact@v4
