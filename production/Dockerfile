@@ -26,7 +26,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     libssl-dev \
     && pip3 install --no-cache-dir -U pip \
+    && pip3 install --no-cache-dir -U "setuptools>=70.0.0" \
     && pip3 install --no-cache-dir "platformio==6.1.13" \
+    && pip3 install --no-cache-dir -U "starlette>=0.40.0" \
     && apt-get remove -y gcc g++ make libffi-dev libssl-dev \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
@@ -39,6 +41,10 @@ RUN useradd --create-home --shell /bin/false builder \
 USER builder
 
 WORKDIR /workspace
+
+# Add healthcheck to ensure PlatformIO is responding
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD /usr/local/bin/platformio --version || exit 1
 
 # Default entrypoint: run platformio if arguments provided
 ENTRYPOINT ["/usr/local/bin/platformio"]
