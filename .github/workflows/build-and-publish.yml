@@ -43,6 +43,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-fs-results.sarif'
+          category: 'trivy-filesystem'
       
       - name: Run Trivy configuration scan
         uses: aquasecurity/trivy-action@master
@@ -58,6 +59,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-config-results.sarif'
+          category: 'trivy-configuration'
       
       - name: Run production Dockerfile security scan
         uses: hadolint/hadolint-action@v3.1.0
@@ -80,12 +82,14 @@ jobs:
         if: always()
         with:
           sarif_file: hadolint-production.sarif
+          category: 'hadolint-production'
       
       - name: Upload development Dockerfile scan results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: hadolint-development.sarif
+          category: 'hadolint-development'
       
       - name: Python dependency security scan
         run: |
