@@ -282,7 +282,7 @@ generate_release_notes() {
         
         # Fallback to commit message if no PR info
         if [ -z "$detailed_info" ]; then
-            local short_hash=$(echo "$commit_hash" | head -c 7)
+            local short_hash="${commit_hash:0:7}"
             detailed_info="$commit_msg ([${short_hash}](https://github.com/sparck75/alteriom-docker-images/commit/${commit_hash}))"
         fi
         
