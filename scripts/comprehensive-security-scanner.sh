@@ -43,7 +43,9 @@ fi
 mkdir -p "$SCAN_RESULTS_DIR"/{basic,advanced,reports,artifacts,sarif}
 
 # Ensure directories are writable
-chmod -R 755 "$SCAN_RESULTS_DIR" 2>/dev/null || true
+# Ensure directories and files have appropriate permissions (directories: 750, files: 640)
+find "$SCAN_RESULTS_DIR" -type d -exec chmod 750 {} + 2>/dev/null || true
+find "$SCAN_RESULTS_DIR" -type f -exec chmod 640 {} + 2>/dev/null || true
 
 if [ "$ADVANCED_MODE" = "true" ]; then
     echo "🛡️ Comprehensive Security Scanner - Advanced Mode"
