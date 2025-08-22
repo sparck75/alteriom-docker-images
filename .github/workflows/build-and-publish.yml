@@ -708,57 +708,45 @@ jobs:
           path: security-scan-results/
           retention-days: 30
       
-      - name: Generate Release Notes
+      - name: Generate Enhanced Release Notes
         id: release_notes
         if: |
           github.ref == 'refs/heads/main' && 
           github.event_name != 'schedule' &&
           (github.event_name != 'push' || steps.changes.outputs.docs_only != 'true')
         run: |
-          # Get commits since last release
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -z "$LAST_TAG" ]; then
-            # If no previous tags, get all commits from beginning
-            COMMITS=$(git log --pretty=format:"- %s (%h)" --reverse)
-          else
-            # Get commits since last tag
-            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --reverse)
-          fi
+          # Make the enhanced release notes generator executable
+          chmod +x scripts/generate-enhanced-release-notes.sh
           
-          # Create release notes
-          cat > release_notes.md << EOF
+          # Generate enhanced release notes with detailed analysis
+          echo "🚀 Generating enhanced release notes with detailed change analysis..."
+          ./scripts/generate-enhanced-release-notes.sh "${{ env.VERSION }}" "${{ env.DOCKER_REPOSITORY }}" "release_notes.md"
+          
+          # Verify the release notes were generated
+          if [ ! -f "release_notes.md" ]; then
+            echo "❌ Failed to generate release notes, falling back to basic format"
+            cat > release_notes.md << EOF
           ## Docker Images v${{ env.VERSION }}
           
-          This release contains the following Docker images:
-          
-          ### Production Builder
-          - \`${{ env.DOCKER_REPOSITORY }}/builder:latest\`
-          - \`${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }}\`
-          
-          ### Development Builder  
-          - \`${{ env.DOCKER_REPOSITORY }}/dev:latest\`
-          - \`${{ env.DOCKER_REPOSITORY }}/dev:${{ env.VERSION }}\`
-          
-          ### Changes in this release
-          $COMMITS
-          
-          ### Testing
-          All images have been validated with ESP32, ESP32-S3, ESP32-C3, and ESP8266 test builds.
-          
-          ### Usage
-          \`\`\`bash
-          docker pull ${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }}
-          docker run --rm -v \${PWD}:/workspace ${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }} pio run -e esp32dev
-          \`\`\`
+          This release contains Docker images for ESP32/ESP8266 development:
+          - Production Builder: \`${{ env.DOCKER_REPOSITORY }}/builder:${{ env.VERSION }}\`
+          - Development Builder: \`${{ env.DOCKER_REPOSITORY }}/dev:${{ env.VERSION }}\`
           
           Built on: $(date -u +%Y-%m-%d)
           EOF
+          else
+            echo "✅ Enhanced release notes generated successfully"
+            # Show a preview of the generated notes (first 20 lines)
+            echo "📋 Release notes preview:"
+            head -20 release_notes.md
+          fi
           
+          # Set the release notes content as output for the GitHub release
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
           cat release_notes.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release with Enhanced Notes
         if: |
           github.ref == 'refs/heads/main' && 
           github.event_name != 'schedule' &&
