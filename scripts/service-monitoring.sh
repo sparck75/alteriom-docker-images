@@ -446,6 +446,42 @@ test_network_connectivity() {
         increment_check "WARN"
     fi
     
+    # Test api.registry.platformio.org access (NEW: Package Registry API)
+    print_status "INFO" "Testing api.registry.platformio.org connectivity..."
+    if timeout 10 curl -s -I "https://api.registry.platformio.org/" >/dev/null 2>&1; then
+        print_status "SUCCESS" "PlatformIO Package Registry API accessible"
+        echo "API_REGISTRY_PLATFORMIO_OK" >> "$REPORT_DIR/network-connectivity.txt"
+        increment_check "PASS"
+        
+        # Enhanced registry API testing - test actual API functionality
+        print_status "INFO" "Testing PlatformIO registry API basic functionality..."
+        if timeout 15 curl -s "https://api.registry.platformio.org/" | grep -q "PlatformIO Registry API" 2>/dev/null; then
+            print_status "SUCCESS" "PlatformIO Registry API responding correctly"
+            echo "API_REGISTRY_RESPONSE_OK" >> "$REPORT_DIR/network-connectivity.txt"
+            increment_check "PASS"
+        else
+            print_status "WARNING" "PlatformIO Registry API unexpected response"
+            echo "API_REGISTRY_RESPONSE_UNEXPECTED" >> "$REPORT_DIR/network-connectivity.txt"
+            increment_check "WARN"
+        fi
+        
+        # Test if registry can be reached from within containers
+        print_status "INFO" "Testing registry access from container environment..."
+        if timeout 15 docker run --rm "$DOCKER_REPOSITORY/builder:latest" sh -c "curl -s -I https://api.registry.platformio.org/ >/dev/null 2>&1" 2>/dev/null; then
+            print_status "SUCCESS" "PlatformIO Registry accessible from containers"
+            echo "API_REGISTRY_CONTAINER_OK" >> "$REPORT_DIR/network-connectivity.txt"
+            increment_check "PASS"
+        else
+            print_status "WARNING" "PlatformIO Registry may not be accessible from containers"
+            echo "API_REGISTRY_CONTAINER_LIMITED" >> "$REPORT_DIR/network-connectivity.txt"
+            increment_check "WARN"
+        fi
+    else
+        print_status "WARNING" "PlatformIO Package Registry API may be restricted"
+        echo "API_REGISTRY_PLATFORMIO_RESTRICTED" >> "$REPORT_DIR/network-connectivity.txt"
+        increment_check "WARN"
+    fi
+    
     # Test GitHub registry connectivity
     print_status "INFO" "Testing GitHub registry connectivity..."
     if docker pull hello-world >/dev/null 2>&1; then
@@ -498,8 +534,8 @@ cat > "$REPORT_DIR/service-monitoring-dashboard.md" << EOF
 
 **Report Generated:** $(date -u)  
 **Repository:** $DOCKER_REPOSITORY  
-**Monitoring Version:** Enhanced v2.0  
-**Network Access:** collector.platformio.org enabled
+**Monitoring Version:** Enhanced v2.1  
+**Network Access:** collector.platformio.org + api.registry.platformio.org enabled
 
 ---
 
@@ -511,7 +547,7 @@ cat > "$REPORT_DIR/service-monitoring-dashboard.md" << EOF
 | **Passed** | $PASSED_CHECKS | ✅ |
 | **Warnings** | $WARNING_CHECKS | ⚠️ |
 | **Failed** | $FAILED_CHECKS | ❌ |
-| **Success Rate** | ${SUCCESS_RATE}% | $([ $SUCCESS_RATE -ge 90 ] && echo "🟢" || [ $SUCCESS_RATE -ge 80 ] && echo "🟡" || echo "🔴") |
+| **Success Rate** | ${SUCCESS_RATE}% | $([ "$SUCCESS_RATE" -ge 90 ] && echo "🟢" || ([ "$SUCCESS_RATE" -ge 80 ] && echo "🟡" || echo "🔴")) |
 
 ---
 

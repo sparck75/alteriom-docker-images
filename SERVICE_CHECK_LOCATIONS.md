@@ -7,7 +7,7 @@ This document provides a comprehensive guide to **exactly where** service checks
 ### 1. 🛡️ Main Service Monitoring Script
 **Location**: [`scripts/service-monitoring.sh`](scripts/service-monitoring.sh)  
 **Purpose**: Comprehensive service validation with 6 categories  
-**Enhanced Features**: Now includes ESP platform support and network connectivity validation
+**Enhanced Features**: Now includes ESP platform support and network connectivity validation with api.registry.platformio.org integration
 
 ```bash
 # Run comprehensive service monitoring (2-5 minutes)
@@ -22,7 +22,7 @@ This document provides a comprehensive guide to **exactly where** service checks
 3. **PlatformIO Service** - Core ESP32/ESP8266 functionality verification
 4. **Container Runtime** - Execution behavior and command processing
 5. **ESP Platform Support** - Platform installation and availability (NEW)
-6. **Network Connectivity** - External service access validation (NEW)
+6. **Network Connectivity** - External service access validation with api.registry.platformio.org and collector.platformio.org (ENHANCED)
 
 ### 2. 🩺 Docker Health Check Implementation
 **Locations**: 
@@ -130,7 +130,7 @@ Service checks automatically run in GitHub Actions when:
 
 ### New Capabilities
 - 🚀 **ESP Platform Support Testing** - Validates ESP32/ESP8266 platform accessibility
-- 🌐 **Network Connectivity Validation** - Tests collector.platformio.org access
+- 🌐 **Network Connectivity Validation** - Tests api.registry.platformio.org and collector.platformio.org access
 - 📊 **Performance Metrics** - Command execution timing analysis
 - 🎯 **Resource Validation** - Memory constraint testing
 - 📋 **Enhanced Reporting** - Comprehensive dashboard with health indicators
@@ -181,6 +181,7 @@ docker pull ghcr.io/sparck75/alteriom-docker-images/dev:latest
 ```
 
 #### Network-Related Failures
+- **api.registry.platformio.org access**: PlatformIO Package Registry API testing
 - **collector.platformio.org access**: Expected in restricted environments
 - **Platform installation timeouts**: Normal in corporate networks
 - **Registry connectivity issues**: Check firewall settings
@@ -216,8 +217,8 @@ docker run --rm ghcr.io/sparck75/alteriom-docker-images/builder:latest --version
 - Check GitHub Actions artifacts after workflow runs
 - Review `service-monitoring-results/` directory after execution
 
-**Enhanced monitoring now includes ESP platform support validation and network connectivity testing with collector.platformio.org access.**
+**Enhanced monitoring now includes ESP platform support validation and network connectivity testing with api.registry.platformio.org and collector.platformio.org access.**
 
 ---
 
-*Service Check Implementation Guide v2.0 | Last Updated: August 2025*
+*Service Check Implementation Guide v2.1 | Last Updated: August 2025*
