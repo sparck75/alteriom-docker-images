@@ -37,3 +37,6 @@ demo-security-results/
 sarif-results/
 *.sarif
 safety-*.json
+
+# Service monitoring results
+service-monitoring-results/
