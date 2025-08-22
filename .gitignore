@@ -28,3 +28,7 @@ node_modules/
 # Secrets
 .env
 .secret
+
+# Security scan results (temporary)
+security-scan-results/
+malware-scan-results/
