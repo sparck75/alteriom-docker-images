@@ -1,0 +1,34 @@
+{
+  "SchemaVersion": 2,
+  "CreatedAt": "2025-08-21T23:59:45.696767355Z",
+  "ArtifactName": ".",
+  "ArtifactType": "filesystem",
+  "Metadata": {
+    "RepoURL": "https://github.com/sparck75/alteriom-docker-images",
+    "Branch": "copilot/fix-39",
+    "Commit": "25f8e70a3747cd9359d84e3cc5c681181ae6d22c",
+    "CommitMsg": "feat: Add security demonstration and final documentation\n\nCo-authored-by: sparck75 \u003c14064405+sparck75@users.noreply.github.com\u003e",
+    "Author": "copilot-swe-agent[bot] \u003c198982749+Copilot@users.noreply.github.com\u003e",
+    "Committer": "copilot-swe-agent[bot] \u003c198982749+Copilot@users.noreply.github.com\u003e"
+  },
+  "Results": [
+    {
+      "Target": "development/Dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    },
+    {
+      "Target": "production/Dockerfile",
+      "Class": "config",
+      "Type": "dockerfile",
+      "MisconfSummary": {
+        "Successes": 20,
+        "Failures": 0
+      }
+    }
+  ]
+}

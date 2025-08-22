@@ -58,9 +58,23 @@ install_security_tools() {
     if ! command_exists trivy; then
         print_status "INFO" "Installing Trivy scanner..."
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-            echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-            sudo apt-get update && sudo apt-get install -y trivy
+            # Install Trivy from GitHub releases (more reliable than apt repository)
+            TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep "tag_name" | cut -d '"' -f 4)
+            if [ -n "$TRIVY_VERSION" ]; then
+                TRIVY_URL="https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION#v}_Linux-64bit.deb"
+                print_status "INFO" "Downloading Trivy ${TRIVY_VERSION} from GitHub releases..."
+                wget -q -O /tmp/trivy.deb "$TRIVY_URL"
+                sudo dpkg -i /tmp/trivy.deb || sudo apt-get install -f -y
+                rm -f /tmp/trivy.deb
+            else
+                print_status "WARNING" "Could not determine latest Trivy version. Trying fallback installation..."
+                # Fallback to direct binary download
+                wget -q -O /tmp/trivy.tar.gz https://github.com/aquasecurity/trivy/releases/latest/download/trivy_Linux-64bit.tar.gz
+                tar -xzf /tmp/trivy.tar.gz -C /tmp/
+                sudo mv /tmp/trivy /usr/local/bin/
+                sudo chmod +x /usr/local/bin/trivy
+                rm -f /tmp/trivy.tar.gz
+            fi
         elif [[ "$OSTYPE" == "darwin"* ]]; then
             brew install trivy
         else

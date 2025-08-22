@@ -439,13 +439,15 @@ jobs:
         run: |
           echo "🔍 Running container image security scans..."
           
-          # Install Trivy for container scanning
+          # Install Trivy for container scanning (using GitHub releases for reliability)
           sudo apt-get update
-          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install -y trivy
+          sudo apt-get install -y wget curl
+          TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep "tag_name" | cut -d '"' -f 4)
+          echo "Installing Trivy ${TRIVY_VERSION} from GitHub releases..."
+          TRIVY_URL="https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION#v}_Linux-64bit.deb"
+          wget -q -O /tmp/trivy.deb "$TRIVY_URL"
+          sudo dpkg -i /tmp/trivy.deb || sudo apt-get install -f -y
+          rm -f /tmp/trivy.deb
           
           # Determine which images to scan based on build type
           if [ "${{ github.event_name }}" = "schedule" ]; then
