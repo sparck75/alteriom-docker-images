@@ -1,14 +1,22 @@
+# Organization-level Issue Template Configuration
+# This file serves as a template for other repositories in the organization
+# Copy this file to your repository's .github/ISSUE_TEMPLATE/config.yml
+# and customize the URLs and organization name as needed
+
 blank_issues_enabled: false
 contact_links:
   - name: 📚 Documentation & README
-    url: https://github.com/sparck75/alteriom-docker-images#readme
+    url: https://github.com/ORGANIZATION/REPOSITORY#readme
     about: Check the comprehensive documentation and usage examples first
   - name: 🔍 Existing Issues
-    url: https://github.com/sparck75/alteriom-docker-images/issues
+    url: https://github.com/ORGANIZATION/REPOSITORY/issues
     about: Search existing issues to avoid duplicates
   - name: 💬 Discussions
-    url: https://github.com/sparck75/alteriom-docker-images/discussions
+    url: https://github.com/ORGANIZATION/REPOSITORY/discussions
     about: Ask questions and discuss ideas with the community
   - name: 🔒 Security Issues
-    url: https://github.com/sparck75/alteriom-docker-images/security/policy
+    url: https://github.com/ORGANIZATION/REPOSITORY/security/policy
     about: Report security vulnerabilities privately through GitHub Security
+  - name: 🛡️ Security Templates Repository
+    url: https://github.com/sparck75/alteriom-docker-images/tree/main/.github
+    about: Access centralized security templates and organizational configurations
