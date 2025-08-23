@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation & README
+    url: https://github.com/sparck75/alteriom-docker-images#readme
+    about: Check the comprehensive documentation and usage examples first
+  - name: 🔍 Existing Issues
+    url: https://github.com/sparck75/alteriom-docker-images/issues
+    about: Search existing issues to avoid duplicates
+  - name: 💬 Discussions
+    url: https://github.com/sparck75/alteriom-docker-images/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 🔒 Security Issues
+    url: https://github.com/sparck75/alteriom-docker-images/security/policy
+    about: Report security vulnerabilities privately through GitHub Security
